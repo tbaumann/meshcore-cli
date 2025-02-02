@@ -55,11 +55,11 @@ class MeshCore:
                 self.contacts={}
             case 3: # contact 
                 c = {}
-                c["public_key"] = bytes(data[1:33])
+                c["public_key"] = data[1:33].hex()
                 c["type"] = data[33]
                 c["flags"] = data[34]
                 c["out_path_len"] = data[35]
-                c["out_path"] = bytes(data[36:100])
+                c["out_path"] = data[36:100].hex()
                 c["adv_name"] = data[100:132].decode().replace("\0","")
                 c["last_advert"] = int.from_bytes(data[132:136], byteorder='little')
                 c["adv_lat"] = int.from_bytes(data[136:140], byteorder='little')
@@ -70,8 +70,8 @@ class MeshCore:
                 self.result.set_result(self.contacts)
             case 5: # self info
                 self.self_info["adv_type"] = data[1]
-                self.self_info["public_key"] = bytes(data[4:36])
-                self.self_info["device_loc"] = bytes(data[36:48])
+                self.self_info["public_key"] = data[4:36].hex()
+                self.self_info["device_loc"] = data[36:48].hex()
                 self.self_info["radio_freq"] = int.from_bytes(data[48:52], byteorder='little')
                 self.self_info["radio_bw"] = int.from_bytes(data[52:56], byteorder='little')
                 self.self_info["radio_sf"] = data[56]
@@ -177,13 +177,13 @@ async def main(args):
     match args[1] :
         case "test" : 
             await test(mc)    
-        case "send" : # sends from pubkey ... does not work for the moment
-            print(await mc.send_msg(args[2].encode(), args[3]))
+        case "send" : 
+            print(await mc.send_msg(bytes.fromhex(args[2]), args[3]))
         case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
             await mc.get_contacts()
-            print(await mc.send_msg(mc.contacts[args[2]]["public_key"][0:6], args[3]))
+            print(await mc.send_msg(bytes.fromhex(mc.contacts[args[2]]["public_key"])[0:6], args[3]))
         case "contacts" :
-            print(await mc.get_contacts())
+            print(json.dumps(await mc.get_contacts(),indent=4))
         case "recv" :
             print(await mc.get_msg())
         case "infos" :
