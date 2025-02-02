@@ -175,19 +175,22 @@ async def main(args):
         return
 
     match args[1] :
-       case "test" : 
+        case "test" : 
             await test(mc)    
-       case "send" : # sends from pubkey ... does not work for the moment
+        case "send" : # sends from pubkey ... does not work for the moment
             print(await mc.send_msg(args[2].encode(), args[3]))
-       case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
+        case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
             await mc.get_contacts()
             print(await mc.send_msg(mc.contacts[args[2]]["public_key"][0:6], args[3]))
-       case "contacts" :
+        case "contacts" :
             print(await mc.get_contacts())
-       case "recv" :
+        case "recv" :
             print(await mc.get_msg())
-       case "infos" :
+        case "infos" :
             print(mc.self_info)
-
+        case "advert" :
+            print(await mc.send_advert())
+        case "set_name" :
+            print(await mc.set_name(args[2]))
 
 asyncio.run(main(sys.argv))
