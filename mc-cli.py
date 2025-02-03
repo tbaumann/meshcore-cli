@@ -103,13 +103,13 @@ class MeshCore:
                 res["text"] = data[13:].decode()
                 self.result.set_result(res)
             # push notifications
-            case 80:
+            case 0x80:
                 print ("Advertisment received")
-            case 81:
+            case 0x81:
                 print("Code path update")
-            case 82:
+            case 0x82:
                 print("Received ACK")
-            case 83:
+            case 0x83:
                 print("Msgs are waiting")
             # unhandled
             case _:
@@ -192,5 +192,7 @@ async def main(args):
             print(await mc.send_advert())
         case "set_name" :
             print(await mc.set_name(args[2]))
+        case "sleep" :
+            await asyncio.sleep(int(args[2]))
 
 asyncio.run(main(sys.argv))
