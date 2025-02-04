@@ -154,7 +154,7 @@ class MeshCore:
         return await self.send(data)
 
     async def get_msg(self):
-        return await self.send(b"\x10")
+        return await self.send(b"\x0A")
 
 
 async def test(mc):
