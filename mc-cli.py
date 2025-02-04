@@ -123,10 +123,15 @@ class MeshCore:
         for task in asyncio.all_tasks():
             task.cancel()
 
-    async def send(self, data):
+    async def send(self, data, timeout = 5):
         self.result = asyncio.Future()
-        await self.client.write_gatt_char(self.rx_char, bytes(data), response=False)
-        return await asyncio.wait_for(self.result, 5)
+        try:
+            await self.client.write_gatt_char(self.rx_char, bytes(data), response=False)
+            res = await asyncio.wait_for(self.result, timeout)
+            return res
+        except TimeoutError :
+            print ("Timeout ...")
+            return False
 
     async def send_appstart(self):
         b1 = bytearray(b'\x01\x03      TEST')
@@ -154,7 +159,7 @@ class MeshCore:
         return await self.send(data)
 
     async def get_msg(self):
-        return await self.send(b"\x0A")
+        return await self.send(b"\x0A", 1)
 
 
 async def test(mc):
