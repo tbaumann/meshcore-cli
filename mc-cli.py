@@ -15,7 +15,7 @@ UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-# BLE adress of the device 
+# BLE adress of the device
 # if None or "" then a scan is performed
 #ADDRESS = "F0:F5:BD:4F:9B:AD"
 ADDRESS = ""
@@ -32,8 +32,6 @@ class MeshCore:
         self.client = None
 
     async def connect(self):
-
-
         def match_meshcore_device(device: BLEDevice, adv: AdvertisementData):
             if adv.local_name == "MeshCore" :
                 return True
@@ -58,12 +56,12 @@ class MeshCore:
 
         await self.send_appstart()
 
-        print("Connexion started") 
+        print("Connexion started")
 
     def handle_rx(self, charac: BleakGATTCharacteristic, data: bytearray):
         match data[0]:
             case 0: # ok
-                if len(data) == 5 :  # an integer 
+                if len(data) == 5 :  # an integer
                     self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
                 else:
                     self.result.set_result(True)
@@ -72,7 +70,7 @@ class MeshCore:
             case 2: # contact start
                 self.contact_nb = int.from_bytes(data[1:5], byteorder='little')
                 self.contacts={}
-            case 3: # contact 
+            case 3: # contact
                 c = {}
                 c["public_key"] = data[1:33].hex()
                 c["type"] = data[33]
@@ -178,25 +176,9 @@ class MeshCore:
     async def get_msg(self):
         return await self.send(b"\x0A", 1)
 
-
-async def test(mc):
-    print("\nGetting timestamp")
-    print(await mc.get_time())
-
-    print("\nSetting name")
-    print(await mc.set_name("node0"))
-
-    print("\nGetting Contacts")
-    print(await mc.get_contacts())
-
-    print("\nSending msg")
-    print(await mc.send_msg( b"\xd6\xe4?\x8e\x9e\xf2","coucou"))
-
 async def next_cmd(mc, cmds):
     argnum = 0
     match cmds[0] :
-        case "test" : 
-            await test(mc)    
         case "get_time" :
             timestamp = await mc.get_time()
             print('Current time :'
@@ -207,7 +189,7 @@ async def next_cmd(mc, cmds):
         case "set_time" :
             argnum = 1
             print(await mc.set_time(cmds[1]))
-        case "send" : 
+        case "send" :
             argnum = 2
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
         case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
@@ -237,10 +219,34 @@ async def next_cmd(mc, cmds):
     print (f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
 
+def usage () :
+    print("""mc-cli.py : CLI interface to MeschCore BLE companion app
+
+   Usage : mc-cli.py <args> <commands>
+
+ Arguments :
+    -h : prints this help
+    -a <address> : specifies device address
+    -s : forces ble scan for a MeshCore device
+
+ Available Commands (can be chained) :
+    infos               : print informations a²²bout the node
+    send <key> <msg>    : sends msg to the node with pubkey starting by key
+    sendto <name> <msg> : sends msg to the node with given name
+    recv                : reads next msg
+    sync_msgs           : gets all unread msgs from the node
+    advert              : sends advert
+    contacts            : gets contact list
+    sync_time           : sync time with system
+    set_time <epoch>    : sets time to given epoch
+    get_time            : gets current time
+    set_name <name>     : sets node name
+    sleep <secs>        : sleeps for a given amount of secs""");
+
 async def main(argv):
     address = ADDRESS
 
-    opts, args = getopt.getopt(sys.argv[1:], "a:s")
+    opts, args = getopt.getopt(sys.argv[1:], "a:sh")
     for opt, arg in opts :
         match opt:
             case "-a" : # address specified on cmdline
@@ -249,7 +255,7 @@ async def main(argv):
                 address = None
 
     if len(args) == 0 :
-        print("Commands : send, sendto, recv, contacts, infos")
+        usage()
         return
 
     mc = MeshCore(address)
