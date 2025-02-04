@@ -89,7 +89,7 @@ class MeshCore:
             case 7: # contact msg recv
                 res = {}
                 res["type"] = "PRIV"
-                res["pubkey_prefix"] = data[1:7]
+                res["pubkey_prefix"] = data[1:7].hex()
                 res["path_len"] = data[7]
                 res["txt_type"] = data[8]
                 res["sender_timestamp"] = int.from_bytes(data[9:13], byteorder='little')
@@ -98,7 +98,7 @@ class MeshCore:
             case 8 : # chanel msg recv
                 res = {}
                 res["type"] = "CHAN"
-                res["pubkey_prefix"] = data[1:7]
+                res["pubkey_prefix"] = data[1:7].hex()
                 res["path_len"] = data[7]
                 res["txt_type"] = data[8]
                 res["sender_timestamp"] = int.from_bytes(data[9:13], byteorder='little')
@@ -201,6 +201,11 @@ async def next_cmd(mc, cmds):
             print(json.dumps(await mc.get_contacts(),indent=4))
         case "recv" :
             print(await mc.get_msg())
+        case "sync_msgs" :
+            res=True
+            while res:
+                res = await mc.get_msg()
+                print (res)
         case "infos" :
             print(mc.self_info)
         case "advert" :
