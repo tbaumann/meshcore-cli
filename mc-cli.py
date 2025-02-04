@@ -3,6 +3,8 @@
 import asyncio
 import sys
 import json
+import time
+import datetime
 
 from itertools import count, takewhile
 from typing import Iterator
@@ -140,6 +142,9 @@ class MeshCore:
         self.time = await self.send(b"\x05")
         return self.time
 
+    async def set_time(self, val):
+        return await self.send(b"\x06" + val.to_bytes(4, 'little'))
+
     async def get_contacts(self):
         return await self.send(b"\x04")
 
@@ -177,6 +182,15 @@ async def main(args):
     match args[1] :
         case "test" : 
             await test(mc)    
+        case "get_time" :
+            timestamp = await mc.get_time()
+            print('Current time :'
+              f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
+              f' ({timestamp})')
+        case "sync_time" :
+            print(await mc.set_time(int(time.time())))
+        case "set_time" :
+            print(await mc.set_time(argv[2]))
         case "send" : 
             print(await mc.send_msg(bytes.fromhex(args[2]), args[3]))
         case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
