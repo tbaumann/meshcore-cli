@@ -143,7 +143,7 @@ class MeshCore:
         return self.time
 
     async def set_time(self, val):
-        return await self.send(b"\x06" + val.to_bytes(4, 'little'))
+        return await self.send(b"\x06" + int(val).to_bytes(4, 'little'))
 
     async def get_contacts(self):
         return await self.send(b"\x04")
@@ -170,16 +170,9 @@ async def test(mc):
     print("\nSending msg")
     print(await mc.send_msg( b"\xd6\xe4?\x8e\x9e\xf2","coucou"))
 
-async def main(args):
-
-    mc = MeshCore(ADDRESS)
-    await mc.connect()
-
-    if len(args) < 2:
-        print("Commands : send, sendto, recv, contacts, infos")
-        return
-
-    match args[1] :
+async def next_cmd(mc, cmds):
+    argnum = 0
+    match cmds[0] :
         case "test" : 
             await test(mc)    
         case "get_time" :
@@ -190,12 +183,15 @@ async def main(args):
         case "sync_time" :
             print(await mc.set_time(int(time.time())))
         case "set_time" :
-            print(await mc.set_time(argv[2]))
+            argnum = 1
+            print(await mc.set_time(cmds[1]))
         case "send" : 
-            print(await mc.send_msg(bytes.fromhex(args[2]), args[3]))
+            argnum = 2
+            print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
         case "sendto" : # sends to a name (need to get contacts first so can take time, contacts should be cached to file ...)
+            argnum = 2
             await mc.get_contacts()
-            print(await mc.send_msg(bytes.fromhex(mc.contacts[args[2]]["public_key"])[0:6], args[3]))
+            print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6], cmds[2]))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
         case "recv" :
@@ -205,8 +201,26 @@ async def main(args):
         case "advert" :
             print(await mc.send_advert())
         case "set_name" :
-            print(await mc.set_name(args[2]))
+            argnum = 1
+            print(await mc.set_name(cmds[1]))
         case "sleep" :
-            await asyncio.sleep(int(args[2]))
+            argnum = 1
+            await asyncio.sleep(int(cmds[1]))
+
+    print (f"cmd {cmds[0:argnum+1]} processed ...")
+    return cmds[argnum+1:]
+
+async def main(args):
+
+    if len(args) < 2:
+        print("Commands : send, sendto, recv, contacts, infos")
+        return
+
+    mc = MeshCore(ADDRESS)
+    await mc.connect()
+
+    cmds = args[1:]
+    while len(cmds)>0 :
+        cmds = await next_cmd(mc, cmds)
 
 asyncio.run(main(sys.argv))
