@@ -262,9 +262,9 @@ async def next_cmd(mc, cmds):
 
 def usage () :
     """ Prints some help """
-    print("""mc-cli.py : CLI interface to MeschCore BLE companion app
+    print("""mccli.py : CLI interface to MeschCore BLE companion app
 
-   Usage : mc-cli.py <args> <commands>
+   Usage : mccli.py <args> <commands>
 
  Arguments :
     -h : prints this help
