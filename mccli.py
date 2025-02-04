@@ -272,7 +272,7 @@ def usage () :
     -s : forces ble scan for a MeshCore device
 
  Available Commands (can be chained) :
-    infos               : print informations a²²bout the node
+    infos               : print informations about the node
     send <key> <msg>    : sends msg to the node with pubkey starting by key
     sendto <name> <msg> : sends msg to the node with given name
     recv                : reads next msg
