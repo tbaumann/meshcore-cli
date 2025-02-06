@@ -148,6 +148,10 @@ class MeshCore:
                 res["sender_timestamp"] = int.from_bytes(data[9:13], byteorder='little')
                 res["text"] = data[13:].decode()
                 self.result.set_result(res)
+            case 9: # current time
+                self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
+            case 10: # no more msgs
+                self.result.set_result(False)
             # push notifications
             case 0x80:
                 print ("Advertisment received")
