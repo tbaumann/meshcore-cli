@@ -185,7 +185,7 @@ class MeshCore:
 
     async def send_appstart(self):
         """ Send APPSTART to the node """
-        b1 = bytearray(b'\x01\x03      TEST')
+        b1 = bytearray(b'\x01\x03      mccli')
         return await self.send(b1)
 
     async def send_advert(self):
