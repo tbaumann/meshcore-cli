@@ -44,6 +44,8 @@ class MeshCore:
         self.time = 0
         self.result = asyncio.Future()
         self.contact_nb = 0
+        self.rx_sem = asyncio.Semaphore(0)
+        self.ack_ev = asyncio.Event()
 
     async def connect(self):
         """
@@ -158,8 +160,10 @@ class MeshCore:
             case 0x81:
                 print("Code path update")
             case 0x82:
+                self.ack_ev.set()
                 print("Received ACK")
             case 0x83:
+                self.rx_sem.release()
                 print("Msgs are waiting")
             # unhandled
             case _:
@@ -213,11 +217,23 @@ class MeshCore:
         """ Send a message to a node """
         timestamp = (await self.get_time()).to_bytes(4, 'little')
         data = b"\x02\x00\x00" + timestamp + dst + msg.encode("ascii")
+        self.ack_ev.clear()
         return await self.send(data)
 
     async def get_msg(self):
         """ Get message from the node (stored in queue) """
-        return await self.send(b"\x0A", 1)
+        res = await self.send(b"\x0A", 1)
+        if res is False :
+            self.rx_sem=asyncio.Semaphore(0) # reset semaphore as there are no msgs in queue
+        return res
+
+    async def wait_msg(self):
+        """ Wait for a message """
+        await self.rx_sem.acquire()
+
+    async def wait_ack(self):
+        """ Wait ack """
+        await self.ack_ev.wait()
 
 async def next_cmd(mc, cmds):
     """ process next command """
@@ -250,6 +266,12 @@ async def next_cmd(mc, cmds):
             while res:
                 res = await mc.get_msg()
                 print (res)
+        case "wait_msg" :
+            await mc.wait_msg()
+            res = await mc.get_msg()
+            print (res)
+        case "wait_ack" :
+            print (await mc.wait_ack())
         case "infos" :
             print(mc.self_info)
         case "advert" :
@@ -279,8 +301,10 @@ def usage () :
     infos               : print informations about the node
     send <key> <msg>    : sends msg to the node with pubkey starting by key
     sendto <name> <msg> : sends msg to the node with given name
+    wait_ack            : wait an ack for last sent msg
     recv                : reads next msg
     sync_msgs           : gets all unread msgs from the node
+    wait_msg            : wait for a message
     advert              : sends advert
     contacts            : gets contact list
     sync_time           : sync time with system
