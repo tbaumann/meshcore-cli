@@ -119,7 +119,9 @@ class MeshCore:
             case 5: # self info
                 self.self_info["adv_type"] = data[1]
                 self.self_info["public_key"] = data[4:36].hex()
-                self.self_info["device_loc"] = data[36:48].hex()
+                self.self_info["adv_lat"] = int.from_bytes(data[36:40], byteorder='little', signed=True)
+                self.self_info["adv_lon"] = int.from_bytes(data[40:44], byteorder='little', signed=True)
+                self.self_info["reserved_44:48"] = data[44:48].hex()
                 self.self_info["radio_freq"] = int.from_bytes(data[48:52], byteorder='little')
                 self.self_info["radio_bw"] = int.from_bytes(data[52:56], byteorder='little')
                 self.self_info["radio_sf"] = data[56]
