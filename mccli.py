@@ -31,6 +31,8 @@ ADDRESS = ""
 
 def printerr (str) :
     sys.stderr.write(str)
+    sys.stderr.write("\n")
+    sys.stderr.flush()
 
 class MeshCore:
     """
