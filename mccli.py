@@ -29,6 +29,9 @@ MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 # if None or "" then a scan is performed
 ADDRESS = ""
 
+def printerr (str) :
+    sys.stderr.write(str)
+
 class MeshCore:
     """
     Interface to a BLE MeshCore device
@@ -61,11 +64,11 @@ class MeshCore:
 
         if self.address is None or self.address == "" :
             scanner = BleakScanner()
-            print("Scanning for devices")
+            printerr("Scanning for devices")
             device = await scanner.find_device_by_filter(match_meshcore_device)
             if device is None :
                 return None
-            print(f"Found device : {device}")
+            printerr(f"Found device : {device}")
             self.client = BleakClient(device)
             self.address = self.client.address
         else:
@@ -85,7 +88,7 @@ class MeshCore:
 
         await self.send_appstart()
 
-        print("Connexion started")
+        printerr("Connexion started")
         return self.address
 
     def handle_rx(self, _: BleakGATTCharacteristic, data: bytearray):
@@ -158,22 +161,22 @@ class MeshCore:
                 self.result.set_result(False)
             # push notifications
             case 0x80:
-                print ("Advertisment received")
+                printerr ("Advertisment received")
             case 0x81:
-                print("Code path update")
+                printerr ("Code path update")
             case 0x82:
                 self.ack_ev.set()
-                print("Received ACK")
+                printerr ("Received ACK")
             case 0x83:
                 self.rx_sem.release()
-                print("Msgs are waiting")
+                printerr ("Msgs are waiting")
             # unhandled
             case _:
-                print(f"Unhandled data received {data}")
+                printerr (f"Unhandled data received {data}")
 
     def handle_disconnect(self, _: BleakClient):
         """ Callback to handle disconnection """
-        print("Device was disconnected, goodbye.")
+        printerr ("Device was disconnected, goodbye.")
         # cancelling all tasks effectively ends the program
         for task in asyncio.all_tasks():
             task.cancel()
@@ -186,7 +189,7 @@ class MeshCore:
             res = await asyncio.wait_for(self.result, timeout)
             return res
         except TimeoutError :
-            print ("Timeout ...")
+            printerr ("Timeout ...")
             return False
 
     async def send_appstart(self):
@@ -285,7 +288,7 @@ async def next_cmd(mc, cmds):
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
 
-    print (f"cmd {cmds[0:argnum+1]} processed ...")
+    printerr (f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
 
 def usage () :
@@ -339,7 +342,7 @@ async def main(argv):
     mc = MeshCore(address)
     address = await mc.connect()
     if address is None or address == "" : # no device, no action
-        print("No device found, exiting ...")
+        printerr ("No device found, exiting ...")
         return
 
     # Store device address in configuration
