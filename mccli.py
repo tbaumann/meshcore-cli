@@ -58,7 +58,8 @@ class MeshCore:
         """
         def match_meshcore_device(_: BLEDevice, adv: AdvertisementData):
             """ Filter to mach MeshCore devices """
-            if adv.local_name.startswith("MeshCore") :
+            if not adv.local_name is None\
+                    and adv.local_name.startswith("MeshCore") :
                 return True
             return False
 
@@ -113,8 +114,8 @@ class MeshCore:
                 c["out_path"] = data[36:100].hex()
                 c["adv_name"] = data[100:132].decode().replace("\0","")
                 c["last_advert"] = int.from_bytes(data[132:136], byteorder='little')
-                c["adv_lat"] = int.from_bytes(data[136:140], byteorder='little')
-                c["adv_lon"] = int.from_bytes(data[140:144], byteorder='little')
+                c["adv_lat"] = int.from_bytes(data[136:140], byteorder='little',signed=True)
+                c["adv_lon"] = int.from_bytes(data[140:144], byteorder='little',signed=True)
                 c["lastmod"] = int.from_bytes(data[144:148], byteorder='little')
                 self.contacts[c["adv_name"]]=c
             case 4: # end of contacts
@@ -122,9 +123,9 @@ class MeshCore:
             case 5: # self info
                 self.self_info["adv_type"] = data[1]
                 self.self_info["public_key"] = data[4:36].hex()
-                self.self_info["adv_lat"] = int.from_bytes(data[36:40], byteorder='little', signed=True)
-                self.self_info["adv_lon"] = int.from_bytes(data[40:44], byteorder='little', signed=True)
-                self.self_info["reserved_44:48"] = data[44:48].hex()
+                self.self_info["adv_lat"] = int.from_bytes(data[36:40], byteorder='little', signed=True)/1e6
+                self.self_info["adv_lon"] = int.from_bytes(data[40:44], byteorder='little', signed=True)/1e6
+                #self.self_info["reserved_44:48"] = data[44:48].hex()
                 self.self_info["radio_freq"] = int.from_bytes(data[48:52], byteorder='little')
                 self.self_info["radio_bw"] = int.from_bytes(data[52:56], byteorder='little')
                 self.self_info["radio_sf"] = data[56]
@@ -278,7 +279,7 @@ async def next_cmd(mc, cmds):
         case "wait_ack" :
             print (await mc.wait_ack())
         case "infos" :
-            print(mc.self_info)
+            print(json.dumps(mc.self_info,indent=4))
         case "advert" :
             print(await mc.send_advert())
         case "set_name" :
