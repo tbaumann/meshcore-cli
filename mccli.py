@@ -55,7 +55,7 @@ class MeshCore:
         """
         def match_meshcore_device(_: BLEDevice, adv: AdvertisementData):
             """ Filter to mach MeshCore devices """
-            if adv.local_name == "MeshCore" :
+            if adv.local_name.startswith("MeshCore") :
                 return True
             return False
 
