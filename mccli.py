@@ -61,11 +61,12 @@ class MeshCore:
         def match_meshcore_device(_: BLEDevice, adv: AdvertisementData):
             """ Filter to mach MeshCore devices """
             if not adv.local_name is None\
-                    and adv.local_name.startswith("MeshCore") :
+                    and adv.local_name.startswith("MeshCore")\
+                    and (self.address is None or self.address in adv.local_name) :
                 return True
             return False
 
-        if self.address is None or self.address == "" :
+        if self.address is None or self.address == "" or len(self.address.split(":")) != 6 :
             scanner = BleakScanner()
             printerr("Scanning for devices")
             device = await scanner.find_device_by_filter(match_meshcore_device)
@@ -304,7 +305,8 @@ def usage () :
 
  Arguments :
     -h : prints this help
-    -a <address> : specifies device address
+    -a <address>    : specifies device address (can be a name)
+    -d <name>       : filter meshcore devices with name or address
     -s : forces ble scan for a MeshCore device
 
  Available Commands (can be chained) :
@@ -332,9 +334,11 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:sh")
+    opts, args = getopt.getopt(argv, "a:d:sh")
     for opt, arg in opts :
         match opt:
+            case "-d" : # name specified on cmdline
+                address = arg
             case "-a" : # address specified on cmdline
                 address = arg
             case "-s" : # explicitely ask to scan address
