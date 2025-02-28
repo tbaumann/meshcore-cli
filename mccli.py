@@ -176,6 +176,23 @@ class MeshCore:
             case 0x83:
                 self.rx_sem.release()
                 printerr ("Msgs are waiting")
+            case 0x84:
+                printerr ("Received raw data")
+                res = {}
+                res["SNR"] = data[1] / 4
+                res["RSSI"] = data[2]
+                res["payload"] = data[4:].hex()
+                print(res)
+            case 0x85:
+                printerr ("Login success")
+            case 0x86:
+                printerr ("Login failed")
+            case 0x87:
+                printerr ("Status response")
+                res = {}
+                res["pubkey_pre"] = data[1:7].hex()
+                res["data_hex"] = data[7:].hex()
+                print(res)
             # unhandled
             case _:
                 printerr (f"Unhandled data received {data}")
@@ -224,6 +241,21 @@ class MeshCore:
         """ Starts retreiving contacts """
         return await self.send(b"\x04")
 
+    async def send_login(self, dst, pwd):
+        data = b"\x1a" + dst + pwd.encode("ascii")
+        return await self.send(data)
+
+    async def send_statusreq(self, dst):
+        data = b"\x1b" + dst
+        return await self.send(data)
+
+    async def send_cmd(self, dst, cmd):
+        """ Send a cmd to a node """
+        timestamp = (await self.get_time()).to_bytes(4, 'little')
+        data = b"\x02\x01\x00" + timestamp + dst + cmd.encode("ascii")
+        #self.ack_ev.clear() # no ack ?
+        return await self.send(data)
+
     async def send_msg(self, dst, msg):
         """ Send a message to a node """
         timestamp = (await self.get_time()).to_bytes(4, 'little')
@@ -268,6 +300,20 @@ async def next_cmd(mc, cmds):
             await mc.get_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
+        case "cmd" :
+            argnum = 2
+            await mc.get_contacts()
+            print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
+                                    cmds[2]))
+        case "login" :
+            argnum = 2
+            await mc.get_contacts()
+            print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
+                                    cmds[2]))
+        case "req_status" :
+            argnum = 1
+            await mc.get_contacts()
+            print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
         case "recv" :
