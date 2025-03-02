@@ -28,7 +28,7 @@ def printerr (str) :
     sys.stderr.write("\n")
     sys.stderr.flush()
 
-class MeshCore:
+class MeshCore () :
     """
     Interface to a BLE MeshCore device
     """
@@ -38,6 +38,7 @@ class MeshCore:
     def __init__(self, address):
         """ Constructor : specify address """
         self.address = address
+        self.transport = None
         self.client = None
         self.rx_char = None
         self.time = 0
@@ -46,13 +47,34 @@ class MeshCore:
         self.rx_sem = asyncio.Semaphore(0)
         self.ack_ev = asyncio.Event()
 
+    class MCClientProtocol:
+        def __init__(self, mc):
+            self.mc = mc
+
+        def connection_made(self, transport):
+            self.mc.transport = transport
+            #printerr('Cx made')
+    
+        def data_received(self, data):
+            #printerr('Data received')
+            self.mc.handle_rx(data)
+
+        def error_received(self, exc):
+            printerr(f'Error received: {exc}')
+    
+        def connection_lost(self, exc):
+            printerr('The server closed the connection')
+
     async def connect(self):
         """
         Connects to the device
 
         """
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect(('192.168.1.1', 5000)) 
+        loop = asyncio.get_running_loop()
+        await loop.create_connection(
+                lambda: self.MCClientProtocol(self), 
+                '192.168.1.1', 5000)
+
         await self.send_appstart()
 
         printerr("Connexion started")
@@ -146,9 +168,8 @@ class MeshCore:
     async def send(self, data, timeout = 5):
         """ Helper function to synchronously send (and receive) data to the node """
         self.result = asyncio.Future()
-        self.sock.send(data)
-        frame = self.sock.recv(1000)
-        self.handle_rx(frame)
+
+        self.transport.write(data)
         try:
             res = await asyncio.wait_for(self.result, timeout)
             return res
