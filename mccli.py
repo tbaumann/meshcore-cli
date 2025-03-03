@@ -295,6 +295,9 @@ class MeshCore:
             printerr ("Timeout ...")
             return False
 
+    async def send_only(self, data): # don't wait reply
+        await self.cx.send(data)
+
     async def send_appstart(self):
         """ Send APPSTART to the node """
         b1 = bytearray(b'\x01\x03      mccli')
@@ -307,6 +310,10 @@ class MeshCore:
     async def set_name(self, name):
         """ Changes the name of the node """
         return await self.send(b'\x08' + name.encode("ascii"))
+
+    async def reboot(self):
+        await self.send_only(b'\x13reboot')
+        return True
 
     async def get_bat(self):
         return await self.send(b'\x14')
@@ -326,7 +333,15 @@ class MeshCore:
 
     async def ensure_contacts(self):
         if len(self.contacts) == 0 :
-            self.get_contacts()
+            await self.get_contacts()
+
+    async def share_contact(self, key):
+        data = b"\x10" + key
+        return await self.send(data)
+
+    async def remove_contact(self, key):
+        data = b"\x0f" + key
+        return await self.send(data)
 
     async def send_login(self, dst, pwd):
         data = b"\x1a" + dst + pwd.encode("ascii")
@@ -381,6 +396,8 @@ async def next_cmd(mc, cmds):
             print(await mc.set_time(cmds[1]))
         case "get_bat" :
             print(await mc.get_bat())
+        case "reboot" :
+            print(await mc.reboot())
         case "send" :
             argnum = 2
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
@@ -410,6 +427,14 @@ async def next_cmd(mc, cmds):
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
+        case "share_contact":
+            argnum = 1
+            await mc.ensure_contacts()
+            print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+        case "remove_contact":
+            argnum = 1
+            await mc.ensure_contacts()
+            print(await mc.remove_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "recv" :
             print(await mc.get_msg())
         case "sync_msgs" :
@@ -453,6 +478,7 @@ def usage () :
 
  Available Commands (can be chained) :
     infos               : print informations about the node
+    reboot
     send <key> <msg>    : sends msg to the node with pubkey starting by key
     sendto <name> <msg> : sends msg to the node with given name
     msg <name> <msg>    : same as sendto
@@ -462,6 +488,8 @@ def usage () :
     wait_msg            : wait for a message
     advert              : sends advert
     contacts            : gets contact list
+    share_contact
+    remove_contact
     sync_time           : sync time with system
     set_time <epoch>    : sets time to given epoch
     get_time            : gets current time
