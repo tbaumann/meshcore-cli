@@ -34,23 +34,57 @@ def printerr (str) :
     sys.stderr.write("\n")
     sys.stderr.flush()
 
-class MeshCore:
-    """
-    Interface to a BLE MeshCore device
-    """
-    self_info={}
-    contacts={}
+class TCPConnection:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.transport = None
 
+    class MCClientProtocol:
+        def __init__(self, cx):
+            self.cx = cx
+
+        def connection_made(self, transport):
+            self.cx.transport = transport
+    
+        def data_received(self, data):
+            self.cx.handle_rx(data)
+
+        def error_received(self, exc):
+            printerr(f'Error received: {exc}')
+    
+        def connection_lost(self, exc):
+            printerr('The server closed the connection')
+
+    async def connect(self):
+        """
+        Connects to the device
+        """
+        loop = asyncio.get_running_loop()
+        await loop.create_connection(
+                lambda: self.MCClientProtocol(self), 
+                self.host, self.port)
+
+        printerr("TCP Connexion started")
+        return self.host
+
+    def set_mc(self, mc) :
+        self.mc = mc
+
+    def handle_rx(self, data: bytearray):
+        if not self.mc is None:
+            self.mc.handle_rx(data)
+
+    async def send(self, data):
+        self.transport.write(data)
+
+class BLEConnection:
     def __init__(self, address):
         """ Constructor : specify address """
         self.address = address
         self.client = None
         self.rx_char = None
-        self.time = 0
-        self.result = asyncio.Future()
-        self.contact_nb = 0
-        self.rx_sem = asyncio.Semaphore(0)
-        self.ack_ev = asyncio.Event()
+        self.mc = None
 
     async def connect(self):
         """
@@ -90,12 +124,49 @@ class MeshCore:
         nus = self.client.services.get_service(UART_SERVICE_UUID)
         self.rx_char = nus.get_characteristic(UART_RX_CHAR_UUID)
 
-        await self.send_appstart()
-
-        printerr("Connexion started")
+        printerr("BLE Connexion started")
         return self.address
 
+    def handle_disconnect(self, _: BleakClient):
+        """ Callback to handle disconnection """
+        printerr ("Device was disconnected, goodbye.")
+        # cancelling all tasks effectively ends the program
+        for task in asyncio.all_tasks():
+            task.cancel()
+
+
+    def set_mc(self, mc) :
+        self.mc = mc
+
     def handle_rx(self, _: BleakGATTCharacteristic, data: bytearray):
+        if not self.mc is None:
+            self.mc.handle_rx(data)
+
+    async def send(self, data):
+        await self.client.write_gatt_char(self.rx_char, bytes(data), response=False)
+
+class MeshCore:
+    """
+    Interface to a BLE MeshCore device
+    """
+    self_info={}
+    contacts={}
+
+    def __init__(self, cx):
+        """ Constructor : specify address """
+        self.time = 0
+        self.result = asyncio.Future()
+        self.contact_nb = 0
+        self.rx_sem = asyncio.Semaphore(0)
+        self.ack_ev = asyncio.Event()
+
+        self.cx = cx
+        cx.set_mc(self)
+
+    async def connect(self) :
+        await self.send_appstart()
+
+    def handle_rx(self, data: bytearray):
         """ Callback to handle received data """
         match data[0]:
             case 0: # ok
@@ -200,18 +271,11 @@ class MeshCore:
             case _:
                 printerr (f"Unhandled data received {data}")
 
-    def handle_disconnect(self, _: BleakClient):
-        """ Callback to handle disconnection """
-        printerr ("Device was disconnected, goodbye.")
-        # cancelling all tasks effectively ends the program
-        for task in asyncio.all_tasks():
-            task.cancel()
-
     async def send(self, data, timeout = 5):
         """ Helper function to synchronously send (and receive) data to the node """
         self.result = asyncio.Future()
         try:
-            await self.client.write_gatt_char(self.rx_char, bytes(data), response=False)
+            await self.cx.send(data)
             res = await asyncio.wait_for(self.result, timeout)
             return res
         except TimeoutError :
@@ -356,6 +420,8 @@ def usage () :
     -h : prints this help
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
+    -t <hostname>   : connects via tcp/ip
+    -p <port>       : specifies tcp port (default 5000)
     -s : forces ble scan for a MeshCore device
 
  Available Commands (can be chained) :
@@ -372,18 +438,23 @@ def usage () :
     set_time <epoch>    : sets time to given epoch
     get_time            : gets current time
     set_name <name>     : sets node name
+    login <name> <pwd>  : log into a node (repeater) with given pwd
+    cmd <name> <cmd>    : sends a command to a repeater
+    req_status <name>   : requests status from a node
     sleep <secs>        : sleeps for a given amount of secs""")
 
 async def main(argv):
     """ Do the job """
     address = ADDRESS
+    port = 5000
+    hostname = None
     # If there is an address in config file, use it by default
     # unless an arg is explicitely given
     if os.path.exists(MCCLI_ADDRESS) :
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:sh")
+    opts, args = getopt.getopt(argv, "a:d:sht:p:")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -392,21 +463,33 @@ async def main(argv):
                 address = arg
             case "-s" : # explicitely ask to scan address
                 address = None
+            case "-t" : 
+                hostname = arg
+            case "-p" :
+                port = int(arg)  
 
     if len(args) == 0 : # no args, no action
         usage()
         return
 
-    mc = MeshCore(address)
-    address = await mc.connect()
-    if address is None or address == "" : # no device, no action
-        printerr ("No device found, exiting ...")
-        return
+    con = None
+    if hostname is None : # connect via ble
+        con = BLEConnection(address)
+        address = await con.connect()
+        if address is None or address == "" : # no device, no action
+            printerr ("No device found, exiting ...")
+            return
 
-    # Store device address in configuration
-    if os.path.isdir(MCCLI_CONFIG_DIR) :
-        with open(MCCLI_ADDRESS, "w", encoding="utf-8") as f :
-            f.write(address)
+        # Store device address in configuration
+        if os.path.isdir(MCCLI_CONFIG_DIR) :
+            with open(MCCLI_ADDRESS, "w", encoding="utf-8") as f :
+                f.write(address)
+    else :
+       con = TCPConnection(hostname, port)
+       await con.connect() 
+
+    mc = MeshCore(con)
+    await mc.connect()
 
     cmds = args
     while len(cmds) > 0 :
