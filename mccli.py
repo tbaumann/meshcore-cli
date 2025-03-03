@@ -146,7 +146,6 @@ class BLEConnection:
         for task in asyncio.all_tasks():
             task.cancel()
 
-
     def set_mc(self, mc) :
         self.mc = mc
 
@@ -320,6 +319,10 @@ class MeshCore:
         """ Starts retreiving contacts """
         return await self.send(b"\x04")
 
+    async def ensure_contacts(self):
+        if len(self.contacts) == 0 :
+            self.get_contacts()
+
     async def send_login(self, dst, pwd):
         data = b"\x1a" + dst + pwd.encode("ascii")
         return await self.send(data)
@@ -376,22 +379,22 @@ async def next_cmd(mc, cmds):
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
         case "sendto" : # sends to a contact from name
             argnum = 2
-            await mc.get_contacts()
+            await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
         case "cmd" :
             argnum = 2
-            await mc.get_contacts()
+            await mc.ensure_contacts()
             print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
         case "login" :
             argnum = 2
-            await mc.get_contacts()
+            await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
         case "req_status" :
             argnum = 1
-            await mc.get_contacts()
+            await mc.ensure_contacts()
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
