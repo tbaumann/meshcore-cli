@@ -13,8 +13,11 @@ $ mccli.py &lt;args&gt; &lt;commands&gt;
 Arguments mostly deals with ble connection
 
 <pre>
-    -h : prints this help
-    -a &lt;address&gt; : specifies device address
+    -h : prints this help                                                                      
+    -a &lt;address&gt;    : specifies device address (can be a name)
+    -d &lt;name&gt;       : filter meshcore devices with name or address
+    -t &lt;hostname&gt;   : connects via tcp/ip
+    -p &lt;port&gt;       : specifies tcp port (default 5000)
     -s : forces ble scan for a MeshCore device
 </pre>
 
@@ -23,17 +26,22 @@ Arguments mostly deals with ble connection
 Commands are given after arguments, they can be chained.
 
  <pre>
-    infos               : print informations a²²bout the node
+    infos               : print informations about the node
     send &lt;key&gt; &lt;msg&gt;    : sends msg to the node with pubkey starting by key
     sendto &lt;name&gt; &lt;msg&gt; : sends msg to the node with given name
+    wait_ack            : wait an ack for last sent msg
     recv                : reads next msg
     sync_msgs           : gets all unread msgs from the node
+    wait_msg            : wait for a message
     advert              : sends advert
     contacts            : gets contact list
     sync_time           : sync time with system
     set_time &lt;epoch&gt;    : sets time to given epoch
     get_time            : gets current time
     set_name &lt;name&gt;     : sets node name
+    login &lt;name&gt; &lt;pwd&gt;  : log into a node (repeater) with given pwd
+    cmd &lt;name&gt; &lt;cmd&gt;    : sends a command to a repeater
+    req_status &lt;name&gt;   : requests status from a node
     sleep &lt;secs&gt;        : sleeps for a given amount of secs
 </pre>
 
