@@ -72,11 +72,23 @@ class TCPConnection:
         self.mc = mc
 
     def handle_rx(self, data: bytearray):
-        if not self.mc is None:
-            self.mc.handle_rx(data)
+        cur_data = data
+        while (len(cur_data) > 0) :
+            if cur_data[0] != 62 :
+                printerr(f"Error with received frame trying anyway ... first byte is {cur_data[0]}")
+        
+            frame_size = int.from_bytes(cur_data[1:2], byteorder='little')
+            frame = cur_data[3:3+frame_size]
+
+            if not self.mc is None:
+                self.mc.handle_rx(frame)
+        
+            cur_data = cur_data[3+frame_size:]
 
     async def send(self, data):
-        self.transport.write(data)
+        size = len(data)
+        pkt = b"<" + size.to_bytes(2, byteorder="little") + data
+        self.transport.write(pkt)
 
 class BLEConnection:
     def __init__(self, address):
