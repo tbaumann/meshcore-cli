@@ -250,6 +250,8 @@ class MeshCore:
                 self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
             case 10: # no more msgs
                 self.result.set_result(False)
+            case 12: # battery voltage
+                self.result.set_result(int.from_bytes(data[1:2], byteorder='little'))
             # push notifications
             case 0x80:
                 printerr ("Advertisment received")
@@ -305,6 +307,9 @@ class MeshCore:
     async def set_name(self, name):
         """ Changes the name of the node """
         return await self.send(b'\x08' + name.encode("ascii"))
+
+    async def get_bat(self):
+        return await self.send(b'\x14')
 
     async def get_time(self):
         """ Get the time (epoch) of the node """
@@ -374,10 +379,17 @@ async def next_cmd(mc, cmds):
         case "set_time" :
             argnum = 1
             print(await mc.set_time(cmds[1]))
+        case "get_bat" :
+            print(await mc.get_bat())
         case "send" :
             argnum = 2
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
         case "sendto" : # sends to a contact from name
+            argnum = 2
+            await mc.ensure_contacts()
+            print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
+                                    cmds[2]))
+        case "msg" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
@@ -443,6 +455,7 @@ def usage () :
     infos               : print informations about the node
     send <key> <msg>    : sends msg to the node with pubkey starting by key
     sendto <name> <msg> : sends msg to the node with given name
+    msg <name> <msg>    : same as sendto
     wait_ack            : wait an ack for last sent msg
     recv                : reads next msg
     sync_msgs           : gets all unread msgs from the node
@@ -453,6 +466,7 @@ def usage () :
     set_time <epoch>    : sets time to given epoch
     get_time            : gets current time
     set_name <name>     : sets node name
+    get_bat             : gets battery level
     login <name> <pwd>  : log into a node (repeater) with given pwd
     cmd <name> <cmd>    : sends a command to a repeater
     req_status <name>   : requests status from a node
