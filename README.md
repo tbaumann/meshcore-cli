@@ -108,5 +108,21 @@ $ ./mccli.py -a F0:F5:BD:4F:9B:AD recv
 Connexion started
 {'type': 'PRIV', 'pubkey_prefix': 'd6e43f8e9ef2', 'path_len': 255, 'txt_type': 0, 'sender_timestamp': 1738670421, 'text': 'hi'}
 cmd ['recv'] processed ...
+
+# logs into a repeater (HomeRep) and check time
+$ ./mccli.py -d t1000 login HomeRep password
+Scanning for devices
+Found device : FB:F2:5C:40:4F:77: MeshCore-t1000
+Connexion started
+{'type': 0, 'expected_ack': b'\x82yU\x02', 'suggested_timeout': 4446}
+cmd ['login', 'HomeRep', 'password'] processed ...
+
+$ ./mccli.py cmd HomeRep clock wait_msg
+Connexion started
+{'type': 0, 'expected_ack': b'\x00\x00\x00\x00', 'suggested_timeout': 2724}
+cmd ['cmd', 'HomeRep', 'clock'] processed ...
+Msgs are waiting
+{'type': 'PRIV', 'pubkey_prefix': '827955027cad', 'path_len': 255, 'txt_type': 1, 'sender_timestamp': 1741030036, 'text': '19:27 - 3/3/2025 UTC'}
+cmd ['wait_msg'] processed ...
 </pre>
 
