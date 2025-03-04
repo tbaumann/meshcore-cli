@@ -30,8 +30,8 @@ MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 # if None or "" then a scan is performed
 ADDRESS = ""
 
-def printerr (str) :
-    sys.stderr.write(str)
+def printerr (s) :
+    sys.stderr.write(str(s))
     sys.stderr.write("\n")
     sys.stderr.flush()
 
@@ -248,6 +248,7 @@ class MeshCore:
         self.rx_sem = asyncio.Semaphore(0)
         self.ack_ev = asyncio.Event()
         self.login_resp = asyncio.Future()
+        self.status_resp = asyncio.Future()
 
         self.cx = cx
         cx.set_mc(self)
@@ -375,7 +376,8 @@ class MeshCore:
                 res["last_snr"] = int.from_bytes(data[50:52], byteorder='little', signed=True) / 4
                 res["direct_dups"] = int.from_bytes(data[52:54], byteorder='little')
                 res["flood_dups"] = int.from_bytes(data[54:56], byteorder='little')
-                print(res)
+                self.status_resp.set_result(res)
+                #printerr(res)
             # unhandled
             case _:
                 printerr (f"Unhandled data received {data}")
@@ -478,8 +480,16 @@ class MeshCore:
             return False
 
     async def send_statusreq(self, dst):
+        self.status_resp = asyncio.Future()
         data = b"\x1b" + dst
         return await self.send(data)
+
+    async def wait_status(self, timeout = 5):
+        try :
+            return await asyncio.wait_for(self.status_resp, timeout)
+        except TimeoutError :
+            printerr ("Timeout...")
+            return False
 
     async def send_cmd(self, dst, cmd):
         """ Send a cmd to a node """
@@ -551,10 +561,14 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
+        case "wait_login":
+            print(await mc.wait_login())
         case "req_status" :
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+        case "wait_status" :
+            print(await mc.wait_status())
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
         case "change_path":
@@ -588,8 +602,6 @@ async def next_cmd(mc, cmds):
             print (res)
         case "wait_ack" :
             await mc.wait_ack()
-        case "wait_login":
-            print(await mc.wait_login())
         case "infos" :
             print(json.dumps(mc.self_info,indent=4))
         case "advert" :
@@ -620,34 +632,35 @@ def usage () :
     -b <baudrate>   : specify baudrate
 
  Available Commands (can be chained) :
-    infos               : print informations about the node
-    reboot
-    send <key> <msg>    : sends msg to the node with pubkey starting by key
-    sendto <name> <msg> : sends msg to the node with given name
-    msg <name> <msg>    : same as sendto
-    wait_ack            : wait an ack for last sent msg
-    recv                : reads next msg
-    sync_msgs           : gets all unread msgs from the node
-    wait_msg            : wait for a message
-    advert              : sends advert
-    contacts            : gets contact list
-    share_contact
-    remove_contact
-    reset_path
-    change_path <path>
-    sync_time           : sync time with system
-    set_time <epoch>    : sets time to given epoch
-    get_time            : gets current time
-    set_name <name>     : sets node name
-    get_bat             : gets battery level
-    login <name> <pwd>  : log into a node (repeater) with given pwd
-    wait_login          : wait for login (timeouts after 5sec)
-    cmd <name> <cmd>    : sends a command to a repeater
-    req_status <name>   : requests status from a node
-    sleep <secs>        : sleeps for a given amount of secs""")
-
-async def main(argv):
-    """ Do the job """
+    infos                   : print informations about the node
+    reboot                  : reboots node
+    send <key> <msg>        : sends msg to the node with pubkey starting by key
+    sendto <name> <msg>     : sends msg to the node with given name
+    msg <name> <msg>        : same as sendto
+    wait_ack                : wait an ack for last sent msg
+    recv                    : reads next msg
+    sync_msgs               : gets all unread msgs from the node
+    wait_msg                : wait for a message and read it
+    advert                  : sends advert
+    contacts                : gets contact list
+    share_contact <ct>      : share a contact with others
+    remove_contact <ct>     : removes a contact from this node
+    reset_path <ct>         : resets path to a contact to flood
+    change_path <ct> <path> : change the path to a contact
+    get_time                : gets current time
+    set_time <epoch>        : sets time to given epoch
+    sync_time               : sync time with system
+    set_name <name>         : sets node name
+    get_bat                 : gets battery level
+    login <name> <pwd>      : log into a node (repeater) with given pwd
+    wait_login              : wait for login (timeouts after 5sec)
+    cmd <name> <cmd>        : sends a command to a repeater (no ack)
+    req_status <name>       : requests status from a node
+    wait_status             : wait and print reply
+    sleep <secs>            : sleeps for a given amount of secs""")
+                        
+async def main(argv):   
+    """ Do the job """  
     address = ADDRESS
     port = 5000
     hostname = None
