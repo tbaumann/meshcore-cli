@@ -335,6 +335,10 @@ class MeshCore:
         if len(self.contacts) == 0 :
             await self.get_contacts()
 
+    async def reset_path(self, key):
+        data = b"\x0D" + key
+        return await self.send(data)
+
     async def share_contact(self, key):
         data = b"\x10" + key
         return await self.send(data)
@@ -427,6 +431,11 @@ async def next_cmd(mc, cmds):
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
+        case "reset_path":
+            argnum = 1
+            await mc.ensure_contacts()
+            print(await mc.reset_path(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+            await mc.get_contacts()
         case "share_contact":
             argnum = 1
             await mc.ensure_contacts()
@@ -490,6 +499,7 @@ def usage () :
     contacts            : gets contact list
     share_contact
     remove_contact
+    reset_path
     sync_time           : sync time with system
     set_time <epoch>    : sets time to given epoch
     get_time            : gets current time
