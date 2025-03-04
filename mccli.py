@@ -561,6 +561,7 @@ def usage () :
     -t <hostname>   : connects via tcp/ip
     -p <port>       : specifies tcp port (default 5000)
     -s <port>       : use serial port <port>
+    -b <baudrate>   : specify baudrate
 
  Available Commands (can be chained) :
     infos               : print informations about the node
@@ -600,7 +601,7 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -609,10 +610,12 @@ async def main(argv):
                 address = arg
             case "-s" : # serial port
                 serial_port = arg
+            case "-b" :
+                baudrate = int(arg)
             case "-t" : 
                 hostname = arg
             case "-p" :
-                port = int(arg)  
+                port = int(arg)
 
     if len(args) == 0 : # no args, no action
         usage()
