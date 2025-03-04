@@ -55,7 +55,8 @@ Commands are given after arguments, they can be chained.
 ### Examples
 
 <pre>
-$ ./mccli.py -s infos
+# gets info from first MC device it finds (was -s but now used for serial port)
+$ ./mccli.py -d "" infos
 Scanning for devices
 Found device : F0:F5:BD:4F:9B:AD: MeshCore
 Connexion started
