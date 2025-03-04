@@ -247,6 +247,7 @@ class MeshCore:
         self.contact_nb = 0
         self.rx_sem = asyncio.Semaphore(0)
         self.ack_ev = asyncio.Event()
+        self.login_resp = asyncio.Future()
 
         self.cx = cx
         cx.set_mc(self)
@@ -348,14 +349,32 @@ class MeshCore:
                 res["payload"] = data[4:].hex()
                 print(res)
             case 0x85:
+                self.login_resp.set_result(True)
                 printerr ("Login success")
             case 0x86:
+                self.login_resp.set_result(False)
                 printerr ("Login failed")
             case 0x87:
                 printerr ("Status response")
                 res = {}
-                res["pubkey_pre"] = data[1:7].hex()
-                res["data_hex"] = data[7:].hex()
+                res["pubkey_pre"] = data[2:8].hex()
+                res["data_hex"] = data[8:].hex()
+                res["bat"] = int.from_bytes(data[8:10], byteorder='little')
+                res["tx_queue_len"] = int.from_bytes(data[10:12], byteorder='little')
+                res["free_queue_len"] = int.from_bytes(data[12:14], byteorder='little')
+                res["last_rssi"] = int.from_bytes(data[14:16], byteorder='little', signed=True)
+                res["nb_recv"] = int.from_bytes(data[16:20], byteorder='little', signed=False)
+                res["nb_sent"] = int.from_bytes(data[20:24], byteorder='little', signed=False)
+                res["airtime"] = int.from_bytes(data[24:28], byteorder='little')
+                res["uptime"] = int.from_bytes(data[28:32], byteorder='little')
+                res["sent_flood"] = int.from_bytes(data[32:36], byteorder='little')
+                res["sent_direct"] = int.from_bytes(data[36:40], byteorder='little')
+                res["recv_flood"] = int.from_bytes(data[40:44], byteorder='little')
+                res["recv_direct"] = int.from_bytes(data[44:48], byteorder='little')
+                res["full_evts"] = int.from_bytes(data[48:50], byteorder='little')
+                res["last_snr"] = int.from_bytes(data[50:52], byteorder='little', signed=True) / 4
+                res["direct_dups"] = int.from_bytes(data[52:54], byteorder='little')
+                res["flood_dups"] = int.from_bytes(data[54:56], byteorder='little')
                 print(res)
             # unhandled
             case _:
@@ -447,8 +466,16 @@ class MeshCore:
         return await self.send(data)
 
     async def send_login(self, dst, pwd):
+        self.login_resp = asyncio.Future()
         data = b"\x1a" + dst + pwd.encode("ascii")
         return await self.send(data)
+
+    async def wait_login(self, timeout = 5):
+        try :
+            return await asyncio.wait_for(self.login_resp, timeout)
+        except TimeoutError :
+            printerr ("Timeout ...")
+            return False
 
     async def send_statusreq(self, dst):
         data = b"\x1b" + dst
@@ -560,7 +587,9 @@ async def next_cmd(mc, cmds):
             res = await mc.get_msg()
             print (res)
         case "wait_ack" :
-            print (await mc.wait_ack())
+            await mc.wait_ack()
+        case "wait_login":
+            print(await mc.wait_login())
         case "infos" :
             print(json.dumps(mc.self_info,indent=4))
         case "advert" :
@@ -605,12 +634,14 @@ def usage () :
     share_contact
     remove_contact
     reset_path
+    change_path <path>
     sync_time           : sync time with system
     set_time <epoch>    : sets time to given epoch
     get_time            : gets current time
     set_name <name>     : sets node name
     get_bat             : gets battery level
     login <name> <pwd>  : log into a node (repeater) with given pwd
+    wait_login          : wait for login (timeouts after 5sec)
     cmd <name> <cmd>    : sends a command to a repeater
     req_status <name>   : requests status from a node
     sleep <secs>        : sleeps for a given amount of secs""")
