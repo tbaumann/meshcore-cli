@@ -272,7 +272,7 @@ class MeshCore:
                 c["public_key"] = data[1:33].hex()
                 c["type"] = data[33]
                 c["flags"] = data[34]
-                c["out_path_len"] = data[35]
+                c["out_path_len"] = int.from_bytes(data[35:35], signed=True)
                 plen = data[35]
                 if plen == 255 : 
                     plen = 0
@@ -424,6 +424,28 @@ class MeshCore:
         data = b"\x0f" + key
         return await self.send(data)
 
+    async def set_out_path(self, contact, path):
+        contact["out_path"] = path
+        contact["out_path_len"] = -1
+        contact["out_path_len"] = int(len(path) / 2)
+
+    async def update_contact(self, contact):
+        out_path_hex = contact["out_path"]
+        out_path_hex = out_path_hex + (128-len(out_path_hex)) * "0" 
+        adv_name_hex = contact["adv_name"].encode().hex()
+        adv_name_hex = adv_name_hex + (64-len(adv_name_hex)) * "0"
+        data = b"\x09" \
+            + bytes.fromhex(contact["public_key"])\
+            + contact["type"].to_bytes(1)\
+            + contact["flags"].to_bytes(1)\
+            + contact["out_path_len"].to_bytes(1, 'little', signed=True)\
+            + bytes.fromhex(out_path_hex)\
+            + bytes.fromhex(adv_name_hex)\
+            + contact["last_advert"].to_bytes(4, 'little')\
+            + contact["adv_lat"].to_bytes(4, 'little', signed=True)\
+            + contact["adv_lon"].to_bytes(4, 'little', signed=True)
+        return await self.send(data)
+
     async def send_login(self, dst, pwd):
         data = b"\x1a" + dst + pwd.encode("ascii")
         return await self.send(data)
@@ -508,6 +530,11 @@ async def next_cmd(mc, cmds):
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "contacts" :
             print(json.dumps(await mc.get_contacts(),indent=4))
+        case "change_path":
+            argnum = 2 
+            await mc.ensure_contacts()
+            await mc.set_out_path(mc.contacts[cmds[1]], cmds[2])
+            print(await mc.update_contact(mc.contacts[cmds[1]]))
         case "reset_path":
             argnum = 1
             await mc.ensure_contacts()
