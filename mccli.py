@@ -356,10 +356,8 @@ class MeshCore:
                 self.login_resp.set_result(False)
                 printerr ("Login failed")
             case 0x87:
-                printerr ("Status response")
                 res = {}
                 res["pubkey_pre"] = data[2:8].hex()
-                res["data_hex"] = data[8:].hex()
                 res["bat"] = int.from_bytes(data[8:10], byteorder='little')
                 res["tx_queue_len"] = int.from_bytes(data[10:12], byteorder='little')
                 res["free_queue_len"] = int.from_bytes(data[12:14], byteorder='little')
@@ -377,6 +375,8 @@ class MeshCore:
                 res["direct_dups"] = int.from_bytes(data[52:54], byteorder='little')
                 res["flood_dups"] = int.from_bytes(data[54:56], byteorder='little')
                 self.status_resp.set_result(res)
+                data_hex = data[8:].hex()
+                printerr (f"Status response: {data_hex}")
                 #printerr(res)
             # unhandled
             case _:
