@@ -274,9 +274,9 @@ class MeshCore:
                 c["public_key"] = data[1:33].hex()
                 c["type"] = data[33]
                 c["flags"] = data[34]
-                c["out_path_len"] = int.from_bytes(data[35:35], signed=True)
-                plen = data[35]
-                if plen == 255 : 
+                c["out_path_len"] = int.from_bytes(data[35:36], signed=True)
+                plen = int.from_bytes(data[35:36], signed=True)
+                if plen == -1 : 
                     plen = 0
                 c["out_path"] = data[36:36+plen].hex()
                 c["adv_name"] = data[100:132].decode().replace("\0","")
