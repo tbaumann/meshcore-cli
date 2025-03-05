@@ -534,7 +534,7 @@ async def next_cmd(mc, cmds):
         case "set_time" :
             argnum = 1
             print(await mc.set_time(cmds[1]))
-        case "get_bat" :
+        case "get_bat" | "b":
             print(await mc.get_bat())
         case "reboot" :
             print(await mc.reboot())
@@ -546,70 +546,70 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
-        case "msg" : # sends to a contact from name
+        case "msg" | "m" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
-        case "cmd" :
+        case "cmd" | "c" :
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
-        case "login" :
+        case "login" | "l" :
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
-        case "wait_login":
+        case "wait_login" | "wl":
             print(await mc.wait_login())
-        case "req_status" :
+        case "req_status" | "rs" :
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "wait_status" :
+        case "wait_status" | "ws" :
             print(await mc.wait_status())
-        case "contacts" :
+        case "contacts" | "lc":
             print(json.dumps(await mc.get_contacts(),indent=4))
-        case "change_path":
+        case "change_path" | "cp":
             argnum = 2 
             await mc.ensure_contacts()
             await mc.set_out_path(mc.contacts[cmds[1]], cmds[2])
             print(await mc.update_contact(mc.contacts[cmds[1]]))
-        case "reset_path":
+        case "reset_path" | "rp" :
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.reset_path(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
             await mc.get_contacts()
-        case "share_contact":
+        case "share_contact" | "sc":
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "remove_contact":
+        case "remove_contact" | "cr":
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.remove_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "recv" :
+        case "recv" | "r" :
             print(await mc.get_msg())
-        case "sync_msgs" :
+        case "sync_msgs" | "sm":
             res=True
             while res:
                 res = await mc.get_msg()
                 print (res)
-        case "wait_msg" :
+        case "wait_msg" | "wm" :
             await mc.wait_msg()
             res = await mc.get_msg()
             print (res)
-        case "wait_ack" :
+        case "wait_ack" | "wa" :
             await mc.wait_ack()
-        case "infos" :
+        case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
-        case "advert" :
+        case "advert" | "a":
             print(await mc.send_advert())
         case "set_name" :
             argnum = 1
             print(await mc.set_name(cmds[1]))
-        case "sleep" :
+        case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
 
