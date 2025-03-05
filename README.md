@@ -27,32 +27,32 @@ Arguments mostly deals with ble connection
 Commands are given after arguments, they can be chained and some have shortcuts.
 
  <pre>
-    infos                   i : print informations about the node
-    reboot                    : reboots node
-    send &lt;key&gt; &lt;msg&gt;          : sends msg to node with pubkey starting by key
-    sendto &lt;name&gt; &lt;msg&gt;       : sends msg to node with given name
-    msg &lt;name&gt; &lt;msg&gt;        m : same as sendto
-    wait_ack                wa: wait an ack for last sent msg
-    recv                    r : reads next msg
-    sync_msgs               sm: gets all unread msgs from the node
-    wait_msg                wm: wait for a message and read it
-    advert                  a : sends advert
-    contacts                lc: gets contact list
-    share_contact &lt;ct&gt;      sc: share a contact with others
-    remove_contact &lt;ct&gt;       : removes a contact from this node
-    reset_path &lt;ct&gt;         rp: resets path to a contact to flood
-    change_path &lt;ct&gt; &lt;path&gt; cp: change the path to a contact
-    get_time                  : gets current time
-    set_time &lt;epoch&gt;          : sets time to given epoch
-    sync_time                 : sync time with system
-    set_name &lt;name&gt;           : sets node name
-    get_bat                 b : gets battery level
-    login &lt;name&gt; &lt;pwd&gt;      l : log into a node (repeater) with given pwd
-    wait_login              wl: wait for login (timeouts after 5sec)
-    cmd &lt;name&gt; &lt;cmd&gt;        c : sends a command to a repeater (no ack)
-    req_status &lt;name&gt;       rs: requests status from a node
-    wait_status             ws: wait and print reply
-    sleep &lt;secs&gt;            s : sleeps for a given amount of secs
+    infos                  : print informations about the node      i 
+    reboot                 : reboots node                             
+    send &lt;key&gt; &lt;msg&gt;       : sends msg to node using pubkey[0:6]
+    sendto &lt;name&gt; &lt;msg&gt;    : sends msg to node with given name        
+    msg &lt;name&gt; &lt;msg&gt;       : same as sendto                         m 
+    wait_ack               : wait an ack for last sent msg          wa
+    recv                   : reads next msg                         r 
+    sync_msgs              : gets all unread msgs from the node     sm
+    wait_msg               : wait for a message and read it         wm
+    advert                 : sends advert                           a 
+    contacts               : gets contact list                      lc
+    share_contact &lt;ct&gt;     : share a contact with others            sc
+    remove_contact &lt;ct&gt;    : removes a contact from this node         
+    reset_path &lt;ct&gt;        : resets path to a contact to flood      rp
+    change_path &lt;ct&gt; &lt;path&gt;: change the path to a contact           cp
+    get_time               : gets current time                        
+    set_time &lt;epoch&gt;       : sets time to given epoch                 
+    sync_time              : sync time with system                    
+    set_name &lt;name&gt;        : sets node name                           
+    get_bat                : gets battery level                     b 
+    login &lt;name&gt; &lt;pwd&gt;     : log into a node (rep) with given pwd   l 
+    wait_login             : wait for login (timeouts after 5sec)   wl
+    cmd &lt;name&gt; &lt;cmd&gt;       : sends a command to a repeater (no ack) c 
+    req_status &lt;name&gt;      : requests status from a node            rs
+    wait_status            : wait and print reply                   ws
+    sleep &lt;secs&gt;           : sleeps for a given amount of secs      s
 </pre>
 
 ### Examples
