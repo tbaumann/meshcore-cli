@@ -546,7 +546,7 @@ async def next_cmd(mc, cmds):
         case "send" :
             argnum = 2
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
-        case "msg" | "sendto" | "m"|"(" : # sends to a contact from name
+        case "msg" | "sendto" | "m"|"{" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
@@ -556,12 +556,12 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
-        case "login" | "l" | "{" :
+        case "login" | "l" | "(" :
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
-        case "wait_login" | "wl"|"}":
+        case "wait_login" | "wl"|")":
             print(await mc.wait_login())
         case "req_status" | "rs" :
             argnum = 1
@@ -600,7 +600,7 @@ async def next_cmd(mc, cmds):
             await mc.wait_msg()
             res = await mc.get_msg()
             print (res)
-        case "wait_ack" | "wa" |")":
+        case "wait_ack" | "wa" |"}":
             await mc.wait_ack()
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
