@@ -632,32 +632,32 @@ def usage () :
     -b <baudrate>   : specify baudrate
 
  Available Commands and shorcuts (can be chained) :
-    infos                  : print informations about the node              i 
-    reboot                 : reboots node                                     
-    send <key> <msg>       : sends msg to node with pubkey starting by key    
-    sendto <name> <msg>    : sends msg to node with given name                
-    msg <name> <msg>       : same as sendto                                 m 
-    wait_ack               : wait an ack for last sent msg                  wa
-    recv                   : reads next msg                                 r 
-    sync_msgs              : gets all unread msgs from the node             sm
-    wait_msg               : wait for a message and read it                 wm
-    advert                 : sends advert                                   a 
-    contacts               : gets contact list                              lc
-    share_contact <ct>     : share a contact with others                    sc
-    remove_contact <ct>    : removes a contact from this node                 
-    reset_path <ct>        : resets path to a contact to flood              rp
-    change_path <ct> <path>: change the path to a contact                   cp
-    get_time               : gets current time                                
-    set_time <epoch>       : sets time to given epoch                         
-    sync_time              : sync time with system                            
-    set_name <name>        : sets node name                                   
-    get_bat                : gets battery level                             b 
-    login <name> <pwd>     : log into a node (repeater) with given pwd      l 
-    wait_login             : wait for login (timeouts after 5sec)           wl
-    cmd <name> <cmd>       : sends a command to a repeater (no ack)         c 
-    req_status <name>      : requests status from a node                    rs
-    wait_status            : wait and print reply                           ws
-    sleep <secs>           : sleeps for a given amount of secs              s""") 
+    infos                  : print informations about the node      i 
+    reboot                 : reboots node                             
+    send <key> <msg>       : sends msg to node using pubkey[0:6]
+    sendto <name> <msg>    : sends msg to node with given name        
+    msg <name> <msg>       : same as sendto                         m 
+    wait_ack               : wait an ack for last sent msg          wa
+    recv                   : reads next msg                         r 
+    sync_msgs              : gets all unread msgs from the node     sm
+    wait_msg               : wait for a message and read it         wm
+    advert                 : sends advert                           a 
+    contacts               : gets contact list                      lc
+    share_contact <ct>     : share a contact with others            sc
+    remove_contact <ct>    : removes a contact from this node         
+    reset_path <ct>        : resets path to a contact to flood      rp
+    change_path <ct> <path>: change the path to a contact           cp
+    get_time               : gets current time                        
+    set_time <epoch>       : sets time to given epoch                 
+    sync_time              : sync time with system                    
+    set_name <name>        : sets node name                           
+    get_bat                : gets battery level                     b 
+    login <name> <pwd>     : log into a node (rep) with given pwd   l 
+    wait_login             : wait for login (timeouts after 5sec)   wl
+    cmd <name> <cmd>       : sends a command to a repeater (no ack) c 
+    req_status <name>      : requests status from a node            rs
+    wait_status            : wait and print reply                   ws
+    sleep <secs>           : sleeps for a given amount of secs      s""") 
                         
 async def main(argv):   
     """ Do the job """  
