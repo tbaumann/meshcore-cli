@@ -516,9 +516,14 @@ class MeshCore:
         """ Wait for a message """
         await self.rx_sem.acquire()
 
-    async def wait_ack(self):
+    async def wait_ack(self, timeout=10):
         """ Wait ack """
-        await self.ack_ev.wait()
+        try:
+            await asyncio.wait_for(self.ack_ev.wait(), timeout)
+            return True
+        except TimeoutError :
+            printerr("Timeout waiting ack")
+            return False
 
 async def next_cmd(mc, cmds):
     """ process next command """
