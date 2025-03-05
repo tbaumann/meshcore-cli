@@ -585,7 +585,7 @@ async def next_cmd(mc, cmds):
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "remove_contact" | "cr":
+        case "remove_contact" :
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.remove_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
@@ -631,33 +631,33 @@ def usage () :
     -s <port>       : use serial port <port>
     -b <baudrate>   : specify baudrate
 
- Available Commands (can be chained) :
-    infos                   : print informations about the node
-    reboot                  : reboots node
-    send <key> <msg>        : sends msg to the node with pubkey starting by key
-    sendto <name> <msg>     : sends msg to the node with given name
-    msg <name> <msg>        : same as sendto
-    wait_ack                : wait an ack for last sent msg
-    recv                    : reads next msg
-    sync_msgs               : gets all unread msgs from the node
-    wait_msg                : wait for a message and read it
-    advert                  : sends advert
-    contacts                : gets contact list
-    share_contact <ct>      : share a contact with others
-    remove_contact <ct>     : removes a contact from this node
-    reset_path <ct>         : resets path to a contact to flood
-    change_path <ct> <path> : change the path to a contact
-    get_time                : gets current time
-    set_time <epoch>        : sets time to given epoch
-    sync_time               : sync time with system
-    set_name <name>         : sets node name
-    get_bat                 : gets battery level
-    login <name> <pwd>      : log into a node (repeater) with given pwd
-    wait_login              : wait for login (timeouts after 5sec)
-    cmd <name> <cmd>        : sends a command to a repeater (no ack)
-    req_status <name>       : requests status from a node
-    wait_status             : wait and print reply
-    sleep <secs>            : sleeps for a given amount of secs""")
+ Available Commands and shorcuts (can be chained) :
+    infos                   i : print informations about the node
+    reboot                    : reboots node
+    send <key> <msg>          : sends msg to node with pubkey starting by key
+    sendto <name> <msg>       : sends msg to node with given name
+    msg <name> <msg>        m : same as sendto
+    wait_ack                wa: wait an ack for last sent msg
+    recv                    r : reads next msg
+    sync_msgs               sm: gets all unread msgs from the node
+    wait_msg                wm: wait for a message and read it
+    advert                  a : sends advert
+    contacts                lc: gets contact list
+    share_contact <ct>      sc: share a contact with others
+    remove_contact <ct>       : removes a contact from this node
+    reset_path <ct>         rp: resets path to a contact to flood
+    change_path <ct> <path> cp: change the path to a contact
+    get_time                  : gets current time
+    set_time <epoch>          : sets time to given epoch
+    sync_time                 : sync time with system
+    set_name <name>           : sets node name
+    get_bat                 b : gets battery level
+    login <name> <pwd>      l : log into a node (repeater) with given pwd
+    wait_login              wl: wait for login (timeouts after 5sec)
+    cmd <name> <cmd>        c : sends a command to a repeater (no ack)
+    req_status <name>       rs: requests status from a node
+    wait_status             ws: wait and print reply
+    sleep <secs>            s : sleeps for a given amount of secs""")
                         
 async def main(argv):   
     """ Do the job """  
