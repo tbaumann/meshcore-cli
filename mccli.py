@@ -351,6 +351,7 @@ class MeshCore:
                 print(res)
             case 0x85:
                 self.login_resp.set_result(True)
+
                 printerr ("Login success")
             case 0x86:
                 self.login_resp.set_result(False)
@@ -390,7 +391,7 @@ class MeshCore:
             res = await asyncio.wait_for(self.result, timeout)
             return res
         except TimeoutError :
-            printerr ("Timeout ...")
+            printerr ("Timeout while sending message ...")
             return False
 
     async def send_only(self, data): # don't wait reply
@@ -512,9 +513,18 @@ class MeshCore:
             self.rx_sem=asyncio.Semaphore(0) # reset semaphore as there are no msgs in queue
         return res
 
-    async def wait_msg(self):
+    async def wait_msg(self, timeout=-1):
         """ Wait for a message """
-        await self.rx_sem.acquire()
+        if timeout == -1 :
+            await self.rx_sem.acquire()
+            return True
+
+        try:
+            await asyncio.wait_for(self.rx_sem.acquire(), timeout)
+            return True
+        except TimeoutError :
+            printerr("Timeout waiting msg")
+            return False
 
     async def wait_ack(self, timeout=6):
         """ Wait ack """
@@ -546,7 +556,7 @@ async def next_cmd(mc, cmds):
         case "send" :
             argnum = 2
             print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
-        case "msg" | "sendto" | "m"|"{" : # sends to a contact from name
+        case "msg" | "sendto" | "m" | "{" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
@@ -556,12 +566,12 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
-        case "login" | "l" | "(" :
+        case "login" | "l" | "[[" :
             argnum = 2
             await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
-        case "wait_login" | "wl"|")":
+        case "wait_login" | "wl" | "]]":
             print(await mc.wait_login())
         case "req_status" | "rs" :
             argnum = 1
@@ -596,11 +606,18 @@ async def next_cmd(mc, cmds):
             while res:
                 res = await mc.get_msg()
                 print (res)
-        case "wait_msg" | "wm" |"]":
+        case "wait_msg" | "wm" :
             await mc.wait_msg()
             res = await mc.get_msg()
             print (res)
-        case "wait_ack" | "wa" |"}":
+        case "trywait_msg" | "wmt" :
+            argnum = 1
+            if await mc.wait_msg(timeout=int(cmds[1])) :
+                print (await mc.get_msg())
+        case "wmt8"|"]":
+            if await mc.wait_msg(timeout=8) :
+               print (await mc.get_msg()) 
+        case "wait_ack" | "wa" | "}":
             await mc.wait_ack()
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
