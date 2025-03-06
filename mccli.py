@@ -426,6 +426,26 @@ class MeshCore:
         """ Sets a new epoch """
         return await self.send(b"\x06" + int(val).to_bytes(4, 'little'))
 
+    async def set_tx_power(self, val):
+        """ Sets tx power """
+        return await self.send(b"\x0c" + int(val).to_bytes(4, 'little'))
+
+    async def set_radio (self, freq, bw, sf, cr):
+        """ Sets radio params """
+        return await self.send(b"\x0b" \
+                + int(freq).to_bytes(4, 'little')\
+                + int(bw).to_bytes(4, 'little')\
+                + int(sf).to_bytes(1, 'little')\
+                + int(cr).to_bytes(1, 'little'))
+
+    async def set_tuning (self, rx_dly, af):
+        """ Sets radio params """
+        return await self.send(b"\x15" \
+                + int(rx_dly).to_bytes(4, 'little')\
+                + int(af).to_bytes(4, 'little')\
+                + int(0).to_bytes(1, 'little')\
+                + int(0).to_bytes(1, 'little'))
+
     async def get_contacts(self):
         """ Starts retreiving contacts """
         return await self.send(b"\x04")
@@ -549,6 +569,15 @@ async def next_cmd(mc, cmds):
         case "set_time" :
             argnum = 1
             print(await mc.set_time(cmds[1]))
+        case "set_txpower"|"txp" :
+            argnum = 1
+            print(await mc.set_tx_power(cmds[1]))
+        case "set_radio"|"rad" :
+            argnum = 4
+            print(await mc.set_radio(cmds[1], cmds[2], cmds[3], cmds[4]))
+        case "set_tuning"|"tun" :
+            argnum = 2
+            print(await mc.set_tuning(cmds[1], cmds[2]))
         case "get_bat" | "b":
             print(await mc.get_bat())
         case "reboot" :
