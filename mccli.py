@@ -516,7 +516,7 @@ class MeshCore:
         """ Wait for a message """
         await self.rx_sem.acquire()
 
-    async def wait_ack(self, timeout=10):
+    async def wait_ack(self, timeout=6):
         """ Wait ack """
         try:
             await asyncio.wait_for(self.ack_ev.wait(), timeout)
