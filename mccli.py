@@ -329,6 +329,8 @@ class MeshCore:
                 self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
             case 10: # no more msgs
                 self.result.set_result(False)
+            case 11: # contact
+                self.result.set_result(data[1:].decode())
             case 12: # battery voltage
                 self.result.set_result(int.from_bytes(data[1:2], byteorder='little'))
             # push notifications
@@ -460,6 +462,10 @@ class MeshCore:
 
     async def share_contact(self, key):
         data = b"\x10" + key
+        return await self.send(data)
+
+    async def export_contact(self, key=""):
+        data = b"\x11" + key
         return await self.send(data)
 
     async def remove_contact(self, key):
@@ -624,6 +630,12 @@ async def next_cmd(mc, cmds):
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+        case "export_contact" | "ec":
+            argnum = 1
+            await mc.ensure_contacts()
+            print(await mc.export_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+        case "export_myself" | "e":
+            print(await mc.export_contact())
         case "remove_contact" :
             argnum = 1
             await mc.ensure_contacts()
