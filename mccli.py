@@ -630,11 +630,11 @@ async def next_cmd(mc, cmds):
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "export_contact" | "ec":
+        case "export_contact"|"ec":
             argnum = 1
             await mc.ensure_contacts()
             print(await mc.export_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "export_myself" | "e":
+        case "export_myself"|"e":
             print(await mc.export_contact())
         case "remove_contact" :
             argnum = 1
