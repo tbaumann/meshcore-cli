@@ -330,7 +330,7 @@ class MeshCore:
             case 10: # no more msgs
                 self.result.set_result(False)
             case 11: # contact
-                self.result.set_result(data[1:].decode())
+                self.result.set_result("meshcore://" + data[1:].hex())
             case 12: # battery voltage
                 self.result.set_result(int.from_bytes(data[1:2], byteorder='little'))
             # push notifications
@@ -464,7 +464,7 @@ class MeshCore:
         data = b"\x10" + key
         return await self.send(data)
 
-    async def export_contact(self, key=""):
+    async def export_contact(self, key=b""):
         data = b"\x11" + key
         return await self.send(data)
 
