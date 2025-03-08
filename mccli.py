@@ -314,7 +314,11 @@ class MeshCore:
                 res["path_len"] = data[7]
                 res["txt_type"] = data[8]
                 res["sender_timestamp"] = int.from_bytes(data[9:13], byteorder='little')
-                res["text"] = data[13:].decode()
+                if data[8] == 2 : # signed packet
+                    res["signature"] = data[13:17].hex()
+                    res["text"] = data[17:].decode()
+                else :
+                    res["text"] = data[13:].decode()
                 self.result.set_result(res)
             case 8 : # chanel msg recv
                 res = {}
