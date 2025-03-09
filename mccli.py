@@ -385,6 +385,8 @@ class MeshCore:
                 data_hex = data[8:].hex()
                 printerr (f"Status response: {data_hex}")
                 #printerr(res)
+            case 0x88:
+                printerr ("Received log data")
             # unhandled
             case _:
                 printerr (f"Unhandled data received {data}")
