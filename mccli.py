@@ -281,8 +281,8 @@ class MeshCore:
                 c["out_path"] = data[36:36+plen].hex()
                 c["adv_name"] = data[100:132].decode().replace("\0","")
                 c["last_advert"] = int.from_bytes(data[132:136], byteorder='little')
-                c["adv_lat"] = int.from_bytes(data[136:140], byteorder='little',signed=True)
-                c["adv_lon"] = int.from_bytes(data[140:144], byteorder='little',signed=True)
+                c["adv_lat"] = int.from_bytes(data[136:140], byteorder='little',signed=True)/1e6
+                c["adv_lon"] = int.from_bytes(data[140:144], byteorder='little',signed=True)/1e6
                 c["lastmod"] = int.from_bytes(data[144:148], byteorder='little')
                 self.contacts[c["adv_name"]]=c
             case 4: # end of contacts
