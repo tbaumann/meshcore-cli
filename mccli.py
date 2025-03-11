@@ -496,8 +496,8 @@ class MeshCore:
             + bytes.fromhex(out_path_hex)\
             + bytes.fromhex(adv_name_hex)\
             + contact["last_advert"].to_bytes(4, 'little')\
-            + contact["adv_lat"].to_bytes(4, 'little', signed=True)\
-            + contact["adv_lon"].to_bytes(4, 'little', signed=True)
+            + int(contact["adv_lat"]*1e6).to_bytes(4, 'little', signed=True)\
+            + int(contact["adv_lon"]*1e6).to_bytes(4, 'little', signed=True)
         return await self.send(data)
 
     async def send_login(self, dst, pwd):
