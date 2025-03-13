@@ -323,11 +323,11 @@ class MeshCore:
             case 8 : # chanel msg recv
                 res = {}
                 res["type"] = "CHAN"
-                res["pubkey_prefix"] = data[1:7].hex()
-                res["path_len"] = data[7]
-                res["txt_type"] = data[8]
-                res["sender_timestamp"] = int.from_bytes(data[9:13], byteorder='little')
-                res["text"] = data[13:].decode()
+                res["channel_idx"] = data[1:2].hex()
+                res["path_len"] = data[2]
+                res["txt_type"] = data[3]
+                res["sender_timestamp"] = int.from_bytes(data[4:8], byteorder='little')
+                res["text"] = data[8:].decode()
                 self.result.set_result(res)
             case 9: # current time
                 self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
@@ -541,7 +541,7 @@ class MeshCore:
     async def send_chan_msg(self, chan, msg):
         """ Send a message to a public channel """
         timestamp = (await self.get_time()).to_bytes(4, 'little')
-        data = b"\x03\x00\x00" + timestamp + chan.to_bytes(1, 'little') + msg.encode("ascii")
+        data = b"\x03\x00" + chan.to_bytes(1, 'little') + timestamp + msg.encode("ascii")
         return await self.send(data)
 
     async def get_msg(self):
