@@ -323,7 +323,7 @@ class MeshCore:
             case 8 : # chanel msg recv
                 res = {}
                 res["type"] = "CHAN"
-                res["channel_idx"] = data[1:2].hex()
+                res["channel_idx"] = data[1]
                 res["path_len"] = data[2]
                 res["txt_type"] = data[3]
                 res["sender_timestamp"] = int.from_bytes(data[4:8], byteorder='little')
