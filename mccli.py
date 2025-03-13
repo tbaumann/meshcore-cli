@@ -538,6 +538,12 @@ class MeshCore:
         self.ack_ev.clear()
         return await self.send(data)
 
+    async def send_chan_msg(self, chan, msg):
+        """ Send a message to a public channel """
+        timestamp = (await self.get_time()).to_bytes(4, 'little')
+        data = b"\x03\x00\x00" + timestamp + chan.to_bytes(1, 'little') + msg.encode("ascii")
+        return await self.send(data)
+
     async def get_msg(self):
         """ Get message from the node (stored in queue) """
         res = await self.send(b"\x0A", 1)
@@ -602,6 +608,12 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
                                     cmds[2]))
+        case "chan_msg"|"ch" :
+            argnum = 2
+            print(await mc.send_chan_msg(cmds[1], cmds[2]))
+        case "def_chan_msg"|"def_chan"|"dch" : # default chan
+            argnum = 1
+            print(await mc.send_chan_msg(0, cmds[1]))
         case "cmd" | "c" | "[" :
             argnum = 2
             await mc.ensure_contacts()
