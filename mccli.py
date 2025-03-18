@@ -295,8 +295,8 @@ class MeshCore:
                 self.self_info["adv_lat"] = int.from_bytes(data[36:40], byteorder='little', signed=True)/1e6
                 self.self_info["adv_lon"] = int.from_bytes(data[40:44], byteorder='little', signed=True)/1e6
                 #self.self_info["reserved_44:48"] = data[44:48].hex()
-                self.self_info["radio_freq"] = int.from_bytes(data[48:52], byteorder='little')
-                self.self_info["radio_bw"] = int.from_bytes(data[52:56], byteorder='little')
+                self.self_info["radio_freq"] = int.from_bytes(data[48:52], byteorder='little') / 1000
+                self.self_info["radio_bw"] = int.from_bytes(data[52:56], byteorder='little') / 1000
                 self.self_info["radio_sf"] = data[56]
                 self.self_info["radio_cr"] = data[57]
                 self.self_info["name"] = data[58:].decode()
@@ -441,8 +441,8 @@ class MeshCore:
     async def set_radio (self, freq, bw, sf, cr):
         """ Sets radio params """
         return await self.send(b"\x0b" \
-                + int(freq).to_bytes(4, 'little')\
-                + int(bw).to_bytes(4, 'little')\
+                + int(float(freq)*1000).to_bytes(4, 'little')\
+                + int(float(bw)*1000).to_bytes(4, 'little')\
                 + int(sf).to_bytes(1, 'little')\
                 + int(cr).to_bytes(1, 'little'))
 
@@ -577,12 +577,12 @@ async def next_cmd(mc, cmds):
     """ process next command """
     argnum = 0
     match cmds[0] :
-        case "get_time" :
+        case "get_time" | "clock" :
             timestamp = await mc.get_time()
             print('Current time :'
               f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
               f' ({timestamp})')
-        case "sync_time" :
+        case "sync_time"|"clock sync":
             print(await mc.set_time(int(time.time())))
         case "set_time" :
             argnum = 1
@@ -593,6 +593,19 @@ async def next_cmd(mc, cmds):
         case "set_radio"|"rad" :
             argnum = 4
             print(await mc.set_radio(cmds[1], cmds[2], cmds[3], cmds[4]))
+        case "set_name" :
+            argnum = 1
+            print(await mc.set_name(cmds[1]))
+        case "set":
+            argnum = 2
+            match cmds[1]:
+                case "radio":
+                    params=cmds[2].split(",")
+                    print (await mc.set_radio(params[0], params[1], params[2], params[3]))
+                case "name":
+                    print (await mc.set_name(cmds[2]))
+                case "tx":
+                    print (await mc.set_tx_power(cmds[2]))
         case "set_tuning"|"tun" :
             argnum = 2
             print(await mc.set_tuning(cmds[1], cmds[2]))
@@ -682,9 +695,6 @@ async def next_cmd(mc, cmds):
             print(json.dumps(mc.self_info,indent=4))
         case "advert" | "a":
             print(await mc.send_advert())
-        case "set_name" :
-            argnum = 1
-            print(await mc.set_name(cmds[1]))
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
