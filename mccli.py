@@ -459,6 +459,12 @@ class MeshCore:
         """ Changes the name of the node """
         return await self.send(b'\x08' + name.encode("ascii"))
 
+    async def set_coords(self, lat, lon):
+        return await self.send(b'\x0e'\
+                + int(lat*1e6).to_bytes(4, 'little', signed=True)\
+                + int(lon*1e6).to_bytes(4, 'little', signed=True)\
+                + int(0).to_bytes(4, 'little'))
+
     async def reboot(self):
         await self.send_only(b'\x13reboot')
         return True
@@ -653,6 +659,19 @@ async def next_cmd(mc, cmds):
                     print (await mc.set_name(cmds[2]))
                 case "tx":
                     print (await mc.set_tx_power(cmds[2]))
+                case "lat":
+                    print (await mc.set_coords(\
+                            float(cmds[2]),\
+                            mc.self_infos['adv_lon']))
+                case "lon":
+                    print (await mc.set_coords(\
+                            mc.self_infos['adv_lat'],\
+                            float(cmds[2])))
+                case "coords":
+                    params=cmds[2].split(",")
+                    print (await mc.set_coords(\
+                            float(params[0]),\
+                            float(params[1])))
         case "set_tuning"|"tun" :
             argnum = 2
             print(await mc.set_tuning(cmds[1], cmds[2]))
