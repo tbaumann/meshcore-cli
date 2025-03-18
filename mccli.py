@@ -578,10 +578,14 @@ async def next_cmd(mc, cmds):
     argnum = 0
     match cmds[0] :
         case "get_time" | "clock" :
-            timestamp = await mc.get_time()
-            print('Current time :'
-              f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
-              f' ({timestamp})')
+            if len(cmds) > 1 and cmds[1] == "sync" :
+                argnum=1
+                print(await mc.set_time(int(time.time())))
+            else:
+                timestamp = await mc.get_time()
+                print('Current time :'
+                    f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
+                    f' ({timestamp})')
         case "sync_time"|"clock sync":
             print(await mc.set_time(int(time.time())))
         case "set_time" :
