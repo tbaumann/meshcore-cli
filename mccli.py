@@ -502,7 +502,7 @@ class MeshCore:
                 + int(0).to_bytes(1, 'little'))
 
     async def set_devicepin (self, pin):
-        return await self.send(b"\x37" \
+        return await self.send(b"\x25" \
                 + int(pin).to_bytes(4, 'little'))
 
     async def get_contacts(self):
