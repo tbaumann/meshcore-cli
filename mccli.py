@@ -265,7 +265,10 @@ class MeshCore:
                 else:
                     self.result.set_result(True)
             case 1: # error
-                self.result.set_result(False)
+                if len(data) > 1:
+                    self.result.set_result(data[1]) # error code if fw > 1.4
+                else:
+                    self.result.set_result(False)
             case 2: # contact start
                 self.contact_nb = int.from_bytes(data[1:5], byteorder='little')
                 self.contacts={}
@@ -320,6 +323,20 @@ class MeshCore:
                 else :
                     res["text"] = data[13:].decode()
                 self.result.set_result(res)
+            case 16: # a reply to CMD_SYNC_NEXT_MESSAGE (ver >= 3)
+                res = {}
+                res["type"] = "PRIV"
+                res["SNR"] = int.from_bytes(data[1:2], byteorder='little', signed=True) * 4;
+                res["pubkey_prefix"] = data[4:10].hex()
+                res["path_len"] = data[10]
+                res["txt_type"] = data[11]
+                res["sender_timestamp"] = int.from_bytes(data[12:16], byteorder='little')
+                if data[11] == 2 : # signed packet
+                    res["signature"] = data[16:20].hex()
+                    res["text"] = data[20:].decode()
+                else :
+                    res["text"] = data[16:].decode()
+                self.result.set_result(res)
             case 8 : # chanel msg recv
                 res = {}
                 res["type"] = "CHAN"
@@ -329,6 +346,16 @@ class MeshCore:
                 res["sender_timestamp"] = int.from_bytes(data[4:8], byteorder='little')
                 res["text"] = data[8:].decode()
                 self.result.set_result(res)
+            case 17: # a reply to CMD_SYNC_NEXT_MESSAGE (ver >= 3)
+                res = {}
+                res["type"] = "CHAN"
+                res["SNR"] = int.from_bytes(data[1:2], byteorder='little', signed=True) * 4;
+                res["channel_idx"] = data[4]
+                res["path_len"] = data[5]
+                res["txt_type"] = data[6]
+                res["sender_timestamp"] = int.from_bytes(data[7:11], byteorder='little')
+                res["text"] = data[11:].decode()
+                self.result.set_result(res)
             case 9: # current time
                 self.result.set_result(int.from_bytes(data[1:5], byteorder='little'))
             case 10: # no more msgs
@@ -337,6 +364,17 @@ class MeshCore:
                 self.result.set_result("meshcore://" + data[1:].hex())
             case 12: # battery voltage
                 self.result.set_result(int.from_bytes(data[1:2], byteorder='little'))
+            case 13: # device info
+                res = {}
+                res["fw ver"] = data[1]
+                if data[1] >= 3:
+                    res["max_contacts"] = data[2] * 2
+                    res["max_channels"] = data[3]
+                    res["ble_pin"] = int.from_bytes(data[4:8], byteorder='little')
+                    res["fw_build"] = data[8:20].decode().replace("\0","")
+                    res["model"] = data[20:60].decode().replace("\0","")
+                    res["ver"] = data[60:80].decode().replace("\0","")
+                self.result.set_result(res)
             # push notifications
             case 0x80:
                 printerr ("Advertisment received")
@@ -409,6 +447,9 @@ class MeshCore:
         """ Send APPSTART to the node """
         b1 = bytearray(b'\x01\x03      mccli')
         return await self.send(b1)
+
+    async def send_device_qeury(self):
+        return await self.send(b"\x16\x03");
 
     async def send_advert(self):
         """ Make the node send an advertisement """
@@ -577,6 +618,8 @@ async def next_cmd(mc, cmds):
     """ process next command """
     argnum = 0
     match cmds[0] :
+        case "q":
+            print(await mc.send_device_qeury())
         case "get_time" | "clock" :
             if len(cmds) > 1 and cmds[1] == "sync" :
                 argnum=1
@@ -586,7 +629,7 @@ async def next_cmd(mc, cmds):
                 print('Current time :'
                     f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
                     f' ({timestamp})')
-        case "sync_time"|"clock sync":
+        case "sync_time"|"clock sync"|"st":
             print(await mc.set_time(int(time.time())))
         case "set_time" :
             argnum = 1
