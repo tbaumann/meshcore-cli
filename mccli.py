@@ -501,6 +501,10 @@ class MeshCore:
                 + int(0).to_bytes(1, 'little')\
                 + int(0).to_bytes(1, 'little'))
 
+    async def set_devicepin (self, pin):
+        return await self.send(b"\x37" \
+                + int(pin).to_bytes(4, 'little'))
+
     async def get_contacts(self):
         """ Starts retreiving contacts """
         return await self.send(b"\x04")
@@ -652,6 +656,8 @@ async def next_cmd(mc, cmds):
         case "set":
             argnum = 2
             match cmds[1]:
+                case "pin":
+                    print (await mc.set_devicepin(cmds[2]))
                 case "radio":
                     params=cmds[2].split(",")
                     print (await mc.set_radio(params[0], params[1], params[2], params[3]))
