@@ -1,6 +1,6 @@
 # mccli
 
-mccli.py : CLI interface to MeschCore BLE companion app
+mccli.py : CLI interface to MeschCore companion app over BLE, TCP or Serial
 
 ## Usage
 
