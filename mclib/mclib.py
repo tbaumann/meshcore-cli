@@ -107,6 +107,10 @@ class TCPConnection:
         self.host = host
         self.port = port
         self.transport = None
+        self.frame_started = False
+        self.frame_size = 0
+        self.header = b""
+        self.inframe = b""
 
     class MCClientProtocol:
         def __init__(self, cx):
@@ -140,18 +144,28 @@ class TCPConnection:
         self.mc = mc
 
     def handle_rx(self, data: bytearray):
-        cur_data = data
-        while (len(cur_data) > 0) :
-            if cur_data[0] != 0x3E :
-                printerr(f"Error with received frame trying anyway ... first byte is {cur_data[0]}")
-        
-            frame_size = int.from_bytes(cur_data[1:2], byteorder='little')
-            frame = cur_data[3:3+frame_size]
-
-            if not self.mc is None:
-                self.mc.handle_rx(frame)
-        
-            cur_data = cur_data[3+frame_size:]
+        headerlen = len(self.header)
+        framelen = len(self.inframe)
+        if not self.frame_started : # wait start of frame
+            if len(data) >= 3 - headerlen:
+                self.header = self.header + data[:3-headerlen]
+                self.frame_started = True
+                self.frame_size = int.from_bytes(self.header[1:], byteorder='little')
+                self.handle_rx(data[3-headerlen:])
+            else:
+                self.header = self.header + data
+        else:
+            if framelen + len(data) < self.frame_size:
+                self.inframe = self.inframe + data
+            else:
+                self.inframe = self.inframe + data[:self.frame_size-framelen]
+                if not self.mc is None:
+                    self.mc.handle_rx(self.inframe)
+                self.frame_started = False
+                self.header = b""
+                self.inframe = b""
+                if framelen + len(data) > self.frame_size:
+                    self.handle_rx(data[self.frame_size-framelen:])
 
     async def send(self, data):
         size = len(data)
