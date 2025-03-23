@@ -2,14 +2,8 @@
     mccli.py : CLI interface to MeschCore BLE companion app
 """
 import asyncio
-import serial_asyncio
-import os
 import sys
-import getopt
-import json
-import datetime
-import time
-from pathlib import Path
+import serial_asyncio
 
 from bleak import BleakClient, BleakScanner
 from bleak.backends.characteristic import BleakGATTCharacteristic

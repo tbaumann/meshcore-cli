@@ -3,7 +3,6 @@
     mccli.py : CLI interface to MeschCore BLE companion app
 """
 import asyncio
-import serial_asyncio
 import os
 import sys
 import getopt
