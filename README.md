@@ -4,7 +4,7 @@ mccli.py : CLI interface to MeschCore companion app over BLE, TCP or Serial
 
 ## Install
 
-You should install (meshcore)[https://github.com/fdlamotte/meshcore_py] package first via pip.
+You should install [meshcore](https://github.com/fdlamotte/meshcore_py) package first via pip.
 
  <pre>
 $ pip install meshcore
