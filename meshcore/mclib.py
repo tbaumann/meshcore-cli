@@ -265,7 +265,9 @@ class MeshCore:
                     self.result.set_result(True)
             case 1: # error
                 if len(data) > 1:
-                    self.result.set_result(data[1]) # error code if fw > 1.4
+                    res = {}
+                    res["error_code"] = data[1]
+                    self.result.set_result(res) # error code if fw > 1.4
                 else:
                     self.result.set_result(False)
             case 2: # contact start
