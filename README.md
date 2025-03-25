@@ -12,6 +12,7 @@ $ pipx install meshcore-cli
 
 It will install you `meshcore-cli` and `meshcli`, which is an alias to the former.
 
+If you want meshcore-cli to remember last BLE device, you should have some `$HOME/.config/meshcore` where configuration for meschcore-cli will be stored (if not it will use first device it finds).
 
 ## Usage
 
@@ -70,14 +71,14 @@ Commands are given after arguments, they can be chained and some have shortcuts.
 
 <pre>
 # gets info from first MC device it finds (was -s but now used for serial port)
-$ ./mccli.py -d "" infos
+$ meshcli -d "" infos
 Scanning for devices
 Found device : F0:F5:BD:4F:9B:AD: MeshCore
 Connexion started
 {'adv_type': 1, 'public_key': '54c11cff0c2a861cfc5b0bd6e4b81cd5e6ca85e058bf53932d86c87dc7a20011', 'device_loc': '000000000000000000000000', 'radio_freq': 867500, 'radio_bw': 250000, 'radio_sf': 10, 'radio_cr': 5, 'name': 'toto'}
 cmd ['infos'] processed ...
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD get_time
+$ meshcli -a F0:F5:BD:4F:9B:AD get_time
 Connexion started
 Current time : 2024-05-15 12:52:53 (1715770373)
 cmd ['get_time'] processed ...
@@ -85,19 +86,19 @@ cmd ['get_time'] processed ...
 $ date
 Tue Feb  4 12:55:05 CET 2025
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD sync_time get_time
+$ meshcli -a F0:F5:BD:4F:9B:AD sync_time get_time
 Connexion started
 True
 cmd ['sync_time'] processed ...
 Current time : 2025-02-04 12:55:24 (1738670124)
 cmd ['get_time'] processed ...
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD contacts
+$ meshcli -a F0:F5:BD:4F:9B:AD contacts
 Connexion started
 {}
 cmd ['contacts'] processed ...
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD sleep 10 contacts
+$ meshcli -a F0:F5:BD:4F:9B:AD sleep 10 contacts
 Connexion started
 Advertisment received
 cmd ['sleep', '10'] processed ...
@@ -117,7 +118,7 @@ cmd ['sleep', '10'] processed ...
 }
 cmd ['contacts'] processed ...
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD sendto flo2 "Hello flo2" sleep 10
+$ meshcli -a F0:F5:BD:4F:9B:AD sendto flo2 "Hello flo2" sleep 10
 Connexion started
 {'type': 1, 'expected_ack': b'9\x05\x0c\x12', 'suggested_timeout': 3260}
 cmd ['sendto', 'flo2', 'Hello flo2'] processed ...
@@ -126,20 +127,20 @@ Received ACK
 Msgs are waiting
 cmd ['sleep', '10'] processed ...
 
-$ ./mccli.py -a F0:F5:BD:4F:9B:AD recv
+$ meshcli -a F0:F5:BD:4F:9B:AD recv
 Connexion started
 {'type': 'PRIV', 'pubkey_prefix': 'd6e43f8e9ef2', 'path_len': 255, 'txt_type': 0, 'sender_timestamp': 1738670421, 'text': 'hi'}
 cmd ['recv'] processed ...
 
 # logs into a repeater (HomeRep) and check time
-$ ./mccli.py -d t1000 login HomeRep password
+$ meshcli -d t1000 login HomeRep password
 Scanning for devices
 Found device : FB:F2:5C:40:4F:77: MeshCore-t1000
 Connexion started
 {'type': 0, 'expected_ack': b'\x82yU\x02', 'suggested_timeout': 4446}
 cmd ['login', 'HomeRep', 'password'] processed ...
 
-$ ./mccli.py cmd HomeRep clock wait_msg
+$ meshcli cmd HomeRep clock wait_msg
 Connexion started
 {'type': 0, 'expected_ack': b'\x00\x00\x00\x00', 'suggested_timeout': 2724}
 cmd ['cmd', 'HomeRep', 'clock'] processed ...

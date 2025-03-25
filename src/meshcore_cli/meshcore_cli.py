@@ -18,7 +18,7 @@ from meshcore import printerr
 from meshcore import MeshCore
 
 # default address is stored in a config file
-MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/mc-cli/"
+MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
 MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 
 # Fallback address if config file not found
@@ -177,9 +177,9 @@ async def next_cmd(mc, cmds):
 
 def usage () :
     """ Prints some help """
-    print("""mccli.py : CLI interface to MeschCore BLE companion app
+    print("""meshcore-cli : CLI interface to MeschCore BLE companion app
 
-   Usage : mccli.py <args> <commands>
+   Usage : meshcore-cli <args> <commands>
 
  Arguments :
     -h : prints this help
