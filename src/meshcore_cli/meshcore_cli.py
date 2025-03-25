@@ -171,6 +171,9 @@ async def next_cmd(mc, cmds):
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
+        case "cli" :
+            argnum = 1
+            print (await mc.send_cli(cmds[1]))
 
     printerr (f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
