@@ -4,7 +4,7 @@ meshcore-cli : CLI interface to MeschCore companion app over BLE, TCP or Serial
 
 ## Install
 
-Meshcore-cli depends on the (python meshcore)[https://github.com/fdlamotte/meshcore_py] package. You can install both via `pip` or `pipx` using the command :
+Meshcore-cli depends on the [python meshcore](https://github.com/fdlamotte/meshcore_py) package. You can install both via `pip` or `pipx` using the command :
 
  <pre>
 $ pipx install meshcore-cli
