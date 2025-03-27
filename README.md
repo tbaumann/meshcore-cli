@@ -20,6 +20,8 @@ If you want meshcore-cli to remember last BLE device, you should have some `$HOM
 $ meshcli &lt;args&gt; &lt;commands&gt;
 </pre>
 
+If using BLE, don't forget to pair your device first (using `bluetoothctl` for instance on Linux) or meshcli won't be able to communicate.
+
 ### Arguments
 
 Arguments mostly deals with ble connection
