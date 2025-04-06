@@ -171,10 +171,15 @@ async def next_cmd(mc, cmds):
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
-        case "cli" :
+        case "cli" | "@" :
             argnum = 1
             print (await mc.send_cli(cmds[1]))
-
+        case _ :
+            if cmds[0][0] == "@" :
+                print (await mc.send_cli(cmds[0][1:]))
+            else :
+                printerr (f"Unknown command : {cmds[0]}")
+            
     printerr (f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
 
