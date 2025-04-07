@@ -96,7 +96,7 @@ async def next_cmd(mc, cmds):
                                     cmds[2]))
         case "chan_msg"|"ch" :
             argnum = 2
-            print(await mc.send_chan_msg(cmds[1], cmds[2]))
+            print(await mc.send_chan_msg(int(cmds[1]), cmds[2]))
         case "def_chan_msg"|"def_chan"|"dch" : # default chan
             argnum = 1
             print(await mc.send_chan_msg(0, cmds[1]))
