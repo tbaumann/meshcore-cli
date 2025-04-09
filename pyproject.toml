@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "meshcore-cli"
-version = "0.3.4"
+version = "0.3.5"
 authors = [
   { name="Florent de Lamotte", email="florent@frizoncorrea.fr" },
 ]
@@ -17,7 +17,7 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
-dependencies = [ "meshcore >= 0.3.2" ]
+dependencies = [ "meshcore >= 0.4.1" ]
 
 [project.urls]
 Homepage = "https://github.com/fdlamotte/meshcore-cli"

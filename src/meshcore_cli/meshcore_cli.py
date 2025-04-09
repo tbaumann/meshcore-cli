@@ -110,6 +110,10 @@ async def next_cmd(mc, cmds):
             await mc.ensure_contacts()
             print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
                                     cmds[2]))
+        case "logout" :
+            argnum = 1
+            await mc.ensure_contacts()
+            print(await mc.send_logout(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
         case "wait_login" | "wl" | "]]":
             print(await mc.wait_login())
         case "req_status" | "rs" :
