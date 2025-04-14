@@ -9,13 +9,17 @@ import getopt
 import json
 import datetime
 import time
+import logging
 from pathlib import Path
 
 from meshcore import TCPConnection
 from meshcore import BLEConnection
 from meshcore import SerialConnection
-from meshcore import printerr
 from meshcore import MeshCore
+from meshcore import EventType
+from meshcore import logger
+
+logger.setLevel(logging.DEBUG)
 
 # default address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -30,161 +34,172 @@ async def next_cmd(mc, cmds):
     argnum = 0
     match cmds[0] :
         case "q":
-            print(await mc.send_device_qeury())
+            print(await mc.commands.send_device_query())
         case "get_time" | "clock" :
             if len(cmds) > 1 and cmds[1] == "sync" :
                 argnum=1
-                print(await mc.set_time(int(time.time())))
+                print(await mc.commands.set_time(int(time.time())))
             else:
-                timestamp = await mc.get_time()
+                timestamp = (await mc.commands.get_time())["time"]
                 print('Current time :'
                     f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
                     f' ({timestamp})')
         case "sync_time"|"clock sync"|"st":
-            print(await mc.set_time(int(time.time())))
+            print(await mc.commands.set_time(int(time.time())))
         case "set_time" :
             argnum = 1
-            print(await mc.set_time(cmds[1]))
+            print(await mc.commands.set_time(cmds[1]))
         case "set_txpower"|"txp" :
             argnum = 1
-            print(await mc.set_tx_power(cmds[1]))
+            print(await mc.commands.set_tx_power(cmds[1]))
         case "set_radio"|"rad" :
             argnum = 4
-            print(await mc.set_radio(cmds[1], cmds[2], cmds[3], cmds[4]))
+            print(await mc.commands.set_radio(cmds[1], cmds[2], cmds[3], cmds[4]))
         case "set_name" :
             argnum = 1
-            print(await mc.set_name(cmds[1]))
+            print(await mc.commands.set_name(cmds[1]))
         case "set":
             argnum = 2
             match cmds[1]:
                 case "pin":
-                    print (await mc.set_devicepin(cmds[2]))
+                    print (await mc.commands.set_devicepin(cmds[2]))
                 case "radio":
                     params=cmds[2].split(",")
-                    print (await mc.set_radio(params[0], params[1], params[2], params[3]))
+                    print (await mc.commands.set_radio(params[0], params[1], params[2], params[3]))
                 case "name":
-                    print (await mc.set_name(cmds[2]))
+                    print (await mc.commands.set_name(cmds[2]))
                 case "tx":
-                    print (await mc.set_tx_power(cmds[2]))
+                    print (await mc.commands.set_tx_power(cmds[2]))
                 case "lat":
-                    print (await mc.set_coords(\
+                    print (await mc.commands.set_coords(\
                             float(cmds[2]),\
                             mc.self_infos['adv_lon']))
                 case "lon":
-                    print (await mc.set_coords(\
+                    print (await mc.commands.set_coords(\
                             mc.self_infos['adv_lat'],\
                             float(cmds[2])))
                 case "coords":
-                    params=cmds[2].split(",")
-                    print (await mc.set_coords(\
+                    params=cmds[2].commands.split(",")
+                    print (await mc.commands.set_coords(\
                             float(params[0]),\
                             float(params[1])))
         case "set_tuning"|"tun" :
             argnum = 2
-            print(await mc.set_tuning(cmds[1], cmds[2]))
+            print(await mc.commands.set_tuning(cmds[1], cmds[2]))
         case "get_bat" | "b":
-            print(await mc.get_bat())
+            print(await mc.commands.get_bat())
         case "reboot" :
-            print(await mc.reboot())
+            print(await mc.commands.reboot())
         case "send" :
             argnum = 2
-            print(await mc.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
+            print(await mc.commands.send_msg(bytes.fromhex(cmds[1]), cmds[2]))
         case "msg" | "sendto" | "m" | "{" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
-            print(await mc.send_msg(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
-                                    cmds[2]))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.send_msg(contact, cmds[2]))
         case "chan_msg"|"ch" :
             argnum = 2
-            print(await mc.send_chan_msg(int(cmds[1]), cmds[2]))
+            print(await mc.commands.send_chan_msg(int(cmds[1]), cmds[2]))
         case "def_chan_msg"|"def_chan"|"dch" : # default chan
             argnum = 1
-            print(await mc.send_chan_msg(0, cmds[1]))
+            print(await mc.commands.send_chan_msg(0, cmds[1]))
         case "cmd" | "c" | "[" :
             argnum = 2
             await mc.ensure_contacts()
-            print(await mc.send_cmd(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])[0:6],
-                                    cmds[2]))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.send_cmd(contact, cmds[2]))
         case "login" | "l" | "[[" :
             argnum = 2
             await mc.ensure_contacts()
-            print(await mc.send_login(bytes.fromhex(mc.contacts[cmds[1]]["public_key"]),
-                                    cmds[2]))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(contact)
+            print(await mc.commands.send_login(contact, cmds[2]))
         case "logout" :
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.send_logout(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "wait_login" | "wl" | "]]":
-            print(await mc.wait_login())
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.send_logout(contact))
         case "req_status" | "rs" :
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.send_statusreq(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-        case "wait_status" | "ws" :
-            print(await mc.wait_status())
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.send_statusreq(contact))
         case "contacts" | "lc":
-            print(json.dumps(await mc.get_contacts(),indent=4))
+            print(json.dumps(await mc.commands.get_contacts(),indent=4))
         case "change_path" | "cp":
             argnum = 2 
             await mc.ensure_contacts()
-            await mc.set_out_path(mc.contacts[cmds[1]], cmds[2])
-            print(await mc.update_contact(mc.contacts[cmds[1]]))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.change_contact_path(contact, cmds[2]))
         case "reset_path" | "rp" :
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.reset_path(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
-            await mc.get_contacts()
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.reset_path(contact))
+            await mc.commands.get_contacts()
         case "share_contact" | "sc":
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.share_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.share_contact(contact))
         case "export_contact"|"ec":
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.export_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.export_contact(contact))
         case "export_myself"|"e":
-            print(await mc.export_contact())
+            print(await mc.commands.export_contact())
         case "remove_contact" :
             argnum = 1
             await mc.ensure_contacts()
-            print(await mc.remove_contact(bytes.fromhex(mc.contacts[cmds[1]]["public_key"])))
+            contact = mc.get_contact_by_name(cmds[1])
+            print(await mc.commands.remove_contact(contact))
         case "recv" | "r" :
-            print(await mc.get_msg())
+            print(await mc.commands.get_msg())
         case "sync_msgs" | "sm":
             res=True
             while res:
-                res = await mc.get_msg()
+                res = (await mc.commands.get_msg())["success"]
                 print (res)
-        case "wait_msg" | "wm" :
-            await mc.wait_msg()
-            res = await mc.get_msg()
-            print (res)
-        case "trywait_msg" | "wmt" :
-            argnum = 1
-            if await mc.wait_msg(timeout=int(cmds[1])) :
-                print (await mc.get_msg())
-        case "wmt8"|"]":
-            if await mc.wait_msg(timeout=8) :
-               print (await mc.get_msg()) 
-        case "wait_ack" | "wa" | "}":
-            await mc.wait_ack()
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
         case "advert" | "a":
-            print(await mc.send_advert())
+            print(await mc.commands.send_advert())
+        case "flood_advert":
+            print(await mc.commands.send_advert(flood=True))
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
+        case "wait_msg" | "wm" :
+            await mc.wait_for_event(EventType.MESSAGES_WAITING)
+            res = await mc.commands.get_msg()
+            print (res)
+        case "trywait_msg" | "wmt" :
+            argnum = 1
+            if await mc.wait_for_event(EventType.MESSAGES_WAITING,
+                        timeout=int(cmds[1])) :
+                print (await mc.get_msg())
+        case "wmt8"|"]":
+            if await mc.wait_for_event(EventType.MESSAGES_WAITING,
+                        timeout=8) :
+               print (await mc.get_msg()) 
+        case "wait_ack" | "wa" | "}":
+            print(await mc.wait_for_event(EventType.ACK, timeout = 5))
+        case "wait_login" | "wl" | "]]":
+            print(await mc.wait_for_event(EventType.LOGIN_SUCCESS))
+        case "wait_status" | "ws" :
+            print(await mc.wait_for_event(EventType.STATUS_RESPONSE))
         case "cli" | "@" :
             argnum = 1
-            print (await mc.send_cli(cmds[1]))
+            print (await mc.commands.send_cli(cmds[1]))
         case _ :
             if cmds[0][0] == "@" :
-                print (await mc.send_cli(cmds[0][1:]))
+                print (await mc.commands.send_cli(cmds[0][1:]))
             else :
-                printerr (f"Unknown command : {cmds[0]}")
+                logger.info (f"Unknown command : {cmds[0]}")
             
-    printerr (f"cmd {cmds[0:argnum+1]} processed ...")
+    logger.info (f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
 
 def usage () :
