@@ -19,7 +19,7 @@ from meshcore import MeshCore
 from meshcore import EventType
 from meshcore import logger
 
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 # default address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -40,7 +40,7 @@ async def next_cmd(mc, cmds):
                 argnum=1
                 print(await mc.commands.set_time(int(time.time())))
             else:
-                timestamp = (await mc.commands.get_time())["time"]
+                timestamp = (await mc.commands.get_time()).payload["time"]
                 print('Current time :'
                     f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
                     f' ({timestamp})')
@@ -126,7 +126,7 @@ async def next_cmd(mc, cmds):
             contact = mc.get_contact_by_name(cmds[1])
             print(await mc.commands.send_statusreq(contact))
         case "contacts" | "lc":
-            print(json.dumps(await mc.commands.get_contacts(),indent=4))
+            print(json.dumps((await mc.commands.get_contacts()).payload,indent=4))
         case "change_path" | "cp":
             argnum = 2 
             await mc.ensure_contacts()
@@ -147,9 +147,9 @@ async def next_cmd(mc, cmds):
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            print(await mc.commands.export_contact(contact))
+            print((await mc.commands.export_contact(contact)).payload)
         case "export_myself"|"e":
-            print(await mc.commands.export_contact())
+            print((await mc.commands.export_contact()).payload)
         case "remove_contact" :
             argnum = 1
             await mc.ensure_contacts()
@@ -158,10 +158,15 @@ async def next_cmd(mc, cmds):
         case "recv" | "r" :
             print(await mc.commands.get_msg())
         case "sync_msgs" | "sm":
-            res=True
-            while res:
-                res = (await mc.commands.get_msg())["success"]
-                print (res)
+            while True:
+                res = await mc.commands.get_msg()
+                if res.type == EventType.NO_MORE_MSGS:
+                    logger.error("No more messages")
+                    break
+                elif res.type == EventType.ERROR:
+                    logger.error(f"Error retrieving messages: {res.payload}")
+                    break
+                print(res) 
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
         case "advert" | "a":
@@ -179,11 +184,11 @@ async def next_cmd(mc, cmds):
             argnum = 1
             if await mc.wait_for_event(EventType.MESSAGES_WAITING,
                         timeout=int(cmds[1])) :
-                print (await mc.get_msg())
+                print (await mc.commands.get_msg())
         case "wmt8"|"]":
             if await mc.wait_for_event(EventType.MESSAGES_WAITING,
                         timeout=8) :
-               print (await mc.get_msg()) 
+               print (await mc.commands.get_msg()) 
         case "wait_ack" | "wa" | "}":
             print(await mc.wait_for_event(EventType.ACK, timeout = 5))
         case "wait_login" | "wl" | "]]":
@@ -290,7 +295,7 @@ async def main(argv):
         con = BLEConnection(address)
         address = await con.connect()
         if address is None or address == "" : # no device, no action
-            printerr ("No device found, exiting ...")
+            logger.error("No device found, exiting ...")
             return
 
         # Store device address in configuration
