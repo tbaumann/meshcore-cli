@@ -29,6 +29,78 @@ MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 # if None or "" then a scan is performed
 ADDRESS = ""
 
+PS = None
+CS = None
+
+# Subscribe to incoming messages
+async def handle_message(event):
+    data = event.payload
+
+    contact = MC.get_contact_by_key_prefix(data['pubkey_prefix'])
+    if contact is None:
+        print(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
+        return
+    print(f"{contact['adv_name']}: {data['text']}")
+
+async def subscribe_to_msgs(mc):
+    global PS, CS
+    # Subscribe to private messages
+    if PS is None :
+        PS = mc.subscribe(EventType.CONTACT_MSG_RECV, handle_message)
+    # Subscribe to channel messages
+    if CS is None :
+        CS = mc.subscribe(EventType.CHANNEL_MSG_RECV, handle_message)
+    await mc.start_auto_message_fetching()
+
+async def interactive_loop(mc) :
+    await mc.ensure_contacts()
+    c = next(iter(mc.contacts.items()))[1]
+
+    try:
+        while True:
+            line = (await asyncio.to_thread(sys.stdin.readline)).rstrip('\n')
+
+            if line.startswith("to ") :
+                dest = line[3:]
+                nc = mc.get_contact_by_name(dest)
+                if nc is None:
+                    print(f"Contact '{DEST}' not found in contacts.")
+                    return
+                else :
+                    contact = nc
+
+            elif line == "quit" or line == "q" :
+                break
+
+            elif line == "contacts" :
+                print (json.dumps(mc.contacts,indent=2))
+
+            elif line == "" :
+                pass
+
+            else :
+                if line.startswith("send") :
+                    line = line[5:]
+                result = await mc.commands.send_msg(contact, line)
+                if result.type == EventType.ERROR:
+                    print(f"⚠️ Failed to send message: {result.payload}")
+                    continue
+                    
+                exp_ack = result.payload["expected_ack"].hex()
+                print(" Sent ... ", end="", flush=True)
+                res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
+                if res is None :
+                    print ("No ack !!!")
+                else :
+                    print ("Ack")
+
+    except KeyboardInterrupt:
+        mc.stop()
+        print("Exiting cli")
+    except asyncio.CancelledError:
+        # Handle task cancellation from KeyboardInterrupt in asyncio.run()
+        print("Exiting cli")
+
 async def next_cmd(mc, cmds):
     """ process next command """
     argnum = 0
@@ -195,6 +267,11 @@ async def next_cmd(mc, cmds):
             print(await mc.wait_for_event(EventType.LOGIN_SUCCESS))
         case "wait_status" | "ws" :
             print(await mc.wait_for_event(EventType.STATUS_RESPONSE))
+        case "msgs_subscribe" | "ms" :
+            await subscribe_to_msgs(mc)
+        case "interactive_loop" | "il" | "chat" :
+            await subscribe_to_msgs(mc)
+            await interactive_loop(mc)
         case "cli" | "@" :
             argnum = 1
             print (await mc.commands.send_cli(cmds[1]))
@@ -252,6 +329,7 @@ def usage () :
                         
 async def main(argv):   
     """ Do the job """  
+    global MC
     address = ADDRESS
     port = 5000
     hostname = None
@@ -303,12 +381,18 @@ async def main(argv):
             with open(MCCLI_ADDRESS, "w", encoding="utf-8") as f :
                 f.write(address)
 
-    mc = MeshCore(con)
-    await mc.connect()
+    MC = MeshCore(con)
+    await MC.connect()
 
     cmds = args
     while len(cmds) > 0 :
-        cmds = await next_cmd(mc, cmds)
+        cmds = await next_cmd(MC, cmds)
 
 def cli():
-    asyncio.run(main(sys.argv[1:]))
+    try:
+        asyncio.run(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        # This prevents the KeyboardInterrupt traceback from being shown
+        print("\nExited cleanly")
+    except Exception as e:
+        print(f"Error: {e}")
