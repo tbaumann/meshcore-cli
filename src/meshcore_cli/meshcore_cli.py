@@ -601,7 +601,7 @@ async def next_cmd(mc, cmds, json_output=False):
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             else:
-                print(f"{res.payload["response"]}")
+                print(f"{res.payload['response']}")
 
         case _ :
             if cmd[0] == "@" :
@@ -612,7 +612,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
                 else:
-                    print(f"{res.payload["response"]}")
+                    print(f"{res.payload['response']}")
 
             else :
                 logger.error(f"Unknown command : {cmd}")
