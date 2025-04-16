@@ -56,7 +56,7 @@ async def interactive_loop(mc) :
 
     try:
         while True:
-            print(f"{contact["adv_name"]}> ", end="", flush=True)
+            print(f"{contact['adv_name']}> ", end="", flush=True)
             line = (await asyncio.to_thread(sys.stdin.readline)).rstrip('\n')
 
             if line.startswith("$") :
@@ -80,7 +80,7 @@ async def interactive_loop(mc) :
                 c = next(it)
                 print (c[1]["adv_name"], end="")
                 for c in it :
-                    print(f", {c[1]["adv_name"]}", end="")
+                    print(f", {c[1]['adv_name']}", end="")
                 print("")
 
             elif line == "" :
@@ -150,10 +150,10 @@ async def next_cmd(mc, cmds, json_output=False):
             else :
                 print("Devince info :")
                 if res.payload["fw ver"] >= 3:
-                    print(f" Model: {res.payload["model"]}")
-                    print(f" Version: {res.payload["ver"]}")
-                    print(f" Build date: {res.payload["fw_build"]}")
-                print(f" Firmware version : {res.payload["fw ver"]}")
+                    print(f" Model: {res.payload['model']}")
+                    print(f" Version: {res.payload['ver']}")
+                    print(f" Build date: {res.payload['fw_build']}")
+                print(f" Firmware version : {res.payload['fw ver']}")
 
         case "get_time" | "clock" :
             if len(cmds) > 1 and cmds[1] == "sync" :
