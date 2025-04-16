@@ -36,14 +36,7 @@ CS = None
 
 # Subscribe to incoming messages
 async def handle_message(event):
-    data = event.payload
-    contact = MC.get_contact_by_key_prefix(data['pubkey_prefix'])
-    if contact is None:
-        print(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
-        name = data["pubkey_prefix"]
-    else:
-        name = contact["adv_name"]
-    print(f"{name}: {data['text']}")
+    await process_event_message(MC, event, False)
 
 async def subscribe_to_msgs(mc):
     global PS, CS
@@ -108,7 +101,7 @@ async def interactive_loop(mc) :
                 if res is None :
                     print ("#", end="")
                 else :
-                    print ("<", end="")
+                    print ("~", end="")
 
     except KeyboardInterrupt:
         mc.stop()
@@ -117,10 +110,36 @@ async def interactive_loop(mc) :
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
         print("Exiting cli")
 
+async def process_event_message(mc, ev, json_output):
+    if ev.type == EventType.NO_MORE_MSGS:
+        logger.debug("No more messages")
+        return False
+    elif ev.type == EventType.ERROR:
+        logger.error(f"Error retrieving messages: {ev.payload}")
+        return False
+    elif json_output :
+        print(json.dumps(ev.payload, indent=4))
+    else :
+        await mc.ensure_contacts()
+        data = ev.payload
+        ct = mc.get_contact_by_key_prefix(data['pubkey_prefix'])
+        if ct is None:
+            logger.info(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
+            name = data["pubkey_prefix"]
+        else:
+            name = ct["adv_name"]
+        print(f"{name}: {data['text']}")
+    return True
+
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
     argnum = 0
-    match cmds[0] :
+    if cmds[0].startswith(".") : # override json_output
+        json_output = True
+        cmd = cmds[0][1:]
+    else:
+        cmd = cmds[0]
+    match cmd :
         case "query" | "q":
             res = await mc.commands.send_device_query()
             logger.debug(res)
@@ -188,6 +207,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else:
+                print("ok")
 
         case "set_radio"|"rad" :
             argnum = 4
@@ -197,6 +218,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else:
+                print("ok")
 
         case "set_name" :
             argnum = 1
@@ -207,7 +230,7 @@ async def next_cmd(mc, cmds, json_output=False):
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             else:
-                print("Name set")
+                print("ok")
 
         case "set":
             argnum = 2
@@ -317,8 +340,6 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error sending message {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
-            else:
-                print("Message sent")
 
         case "msg" | "sendto" | "m" | "{" : # sends to a contact from name
             argnum = 2
@@ -329,9 +350,8 @@ async def next_cmd(mc, cmds, json_output=False):
             if res.type == EventType.ERROR:
                 print(f"Error sending message: {res}")
             elif json_output :
+                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                 print(json.dumps(res.payload, indent=4))
-            else :
-                print("Message sent")
 
         case "chan_msg"|"ch" :
             argnum = 2
@@ -341,8 +361,6 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error sending message: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
-            else:
-                print("Message sent")
 
         case "def_chan_msg"|"def_chan"|"dch" : # default chan
             argnum = 1
@@ -362,6 +380,7 @@ async def next_cmd(mc, cmds, json_output=False):
             if res.type == EventType.ERROR:
                 print(f"Error sending cmd: {res}")
             elif json_output :
+                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                 print(json.dumps(res.payload, indent=4))
 
         case "login" | "l" | "[[" :
@@ -373,6 +392,7 @@ async def next_cmd(mc, cmds, json_output=False):
             if res.type == EventType.ERROR:
                 print(f"Error while loging: {res}")
             elif json_output :
+                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                 print(json.dumps(res.payload, indent=4))
 
         case "logout" :
@@ -404,6 +424,9 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error asking for contacts: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else :
+                for c in res.payload.items():
+                    print(c[1]["adv_name"])
 
         case "change_path" | "cp":
             argnum = 2 
@@ -477,32 +500,14 @@ async def next_cmd(mc, cmds, json_output=False):
         case "recv" | "r" :
             res = await mc.commands.get_msg()
             logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error retreiving msg: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
+            await process_event_message(mc, res, json_output)
 
         case "sync_msgs" | "sm":
-            while True:
+            ret = True
+            while ret:
                 res = await mc.commands.get_msg()
                 logger.debug(res) 
-                if res.type == EventType.NO_MORE_MSGS:
-                    logger.info("No more messages")
-                    break
-                elif res.type == EventType.ERROR:
-                    logger.error(f"Error retrieving messages: {res.payload}")
-                    break
-                elif json_output :
-                    print(json.dumps(res.payload, indent=4))
-                else :
-                    data = res.payload
-                    ct = mc.get_contact_by_key_prefix(data['pubkey_prefix'])
-                    if ct is None:
-                        logger.info(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
-                        name = data["pubkey_prefix"]
-                    else:
-                        name = ct["adv_name"]
-                    print(f"{name}: {data['text']}")
+                ret = await process_event_message(mc, res, json_output)
 
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
@@ -510,57 +515,74 @@ async def next_cmd(mc, cmds, json_output=False):
         case "advert" | "a":
             res = await mc.commands.send_advert()
             logger.debug(res)
-            if json_output :
+            if res.type == EventType.ERROR:
+                print(f"Error sending advert: {res}")
+            elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else:
+                print("Advert sent")
 
         case "flood_advert":
             res = await mc.commands.send_advert(flood=True)
             logger.debug(res)
-            if json_output :
+            if res.type == EventType.ERROR:
+                print(f"Error sending advert: {res}")
+            elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else:
+                print("Advert sent")
 
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
 
         case "wait_msg" | "wm" :
-            await mc.wait_for_event(EventType.MESSAGES_WAITING)
-            res = await mc.commands.get_msg()
-            logger.debug(res)
-            if json_output :
-                print(json.dumps(res.payload, indent=4))
+            ev = await mc.wait_for_event(EventType.MESSAGES_WAITING)
+            if ev is None:
+                print("Timeout waiting msg")
+            else:
+                res = await mc.commands.get_msg()
+                logger.debug(res)
+                await process_event_message(mc, res, json_output)
 
         case "trywait_msg" | "wmt" :
             argnum = 1
             if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=int(cmds[1])) :
                 res = await mc.commands.get_msg()
                 logger.debug(res)
-                if json_output :
-                    print(json.dumps(res.payload, indent=4))
+                await process_event_message(mc, res, json_output)
 
         case "wmt8"|"]":
             if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=8) :
                 res = await mc.commands.get_msg()
                 logger.debug(res)
-                if json_output :
-                    print(json.dumps(res.payload, indent=4))
+                await process_event_message(mc, res, json_output)
 
         case "wait_ack" | "wa" | "}":
             res = await mc.wait_for_event(EventType.ACK, timeout = 5)
             logger.debug(res)
-            if json_output :
+            if res is None:
+                print("Timeout waiting ack")
+            elif json_output :
                 print(json.dumps(res.payload, indent=4))
 
         case "wait_login" | "wl" | "]]":
             res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
             logger.debug(res)
-            if json_output :
-                print(json.dumps(res.payload, indent=4))
+            if res is None:
+                print("Timeout waiting login response")
+            elif json_output :
+                if res.type == EventType.LOGIN_SUCCESS:
+                    print(json.dumps({"login_success" : True}, indent=4))
+                else:
+                    print(json.dumps({"login_success" : False}, indent=4))
 
         case "wait_status" | "ws" :
             res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
             logger.debug(res)
-            if json_output :
+            if res is None:
+                print("Timeout waiting status")
+            else :
                 print(json.dumps(res.payload, indent=4))
 
         case "msgs_subscribe" | "ms" :
@@ -574,17 +596,28 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 1
             res = await mc.commands.send_cli(cmds[1])
             logger.debug(res)
-            if json_output :
+            if res.type == EventType.ERROR:
+                print(f"Error sending cli cmd: {res}")
+            elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else:
+                print(f"{res.payload["response"]}")
 
         case _ :
-            if cmds[0][0] == "@" :
-                res = await mc.commands.send_cli(cmds[0][1:])
+            if cmd[0] == "@" :
+                res = await mc.commands.send_cli(cmd[1:])
                 logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error sending cli cmd: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                else:
+                    print(f"{res.payload["response"]}")
+
             else :
-                logger.error(f"Unknown command : {cmds[0]}")
+                logger.error(f"Unknown command : {cmd}")
             
-    logger.info (f"cmd {cmds[0:argnum+1]} processed ...")
+    logger.debug(f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
 
 async def process_cmds (mc, args, json_output=False) :
