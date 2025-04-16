@@ -168,6 +168,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Time synced")
+
         case "set_time" :
             argnum = 1
             res = await mc.commands.set_time(cmds[1])
@@ -178,6 +179,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Time synced")
+
         case "set_txpower"|"txp" :
             argnum = 1
             res = await mc.commands.set_tx_power(cmds[1])
@@ -186,6 +188,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "set_radio"|"rad" :
             argnum = 4
             res = await mc.commands.set_radio(cmds[1], cmds[2], cmds[3], cmds[4])
@@ -194,6 +197,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "set_name" :
             argnum = 1
             res = await mc.commands.set_name(cmds[1])
@@ -204,6 +208,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Name set")
+
         case "set":
             argnum = 2
             match cmds[1]:
@@ -278,6 +283,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(json.dumps(res.payload, indent=4))
                     else:
                         print("ok")
+
         case "set_tuning"|"tun" :
             argnum = 2
             res = await mc.commands.set_tuning(cmds[1], cmds[2])
@@ -286,6 +292,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "get_bat" | "b":
             res = await mc.commands.get_bat()
             logger.debug(res)
@@ -295,11 +302,13 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print(f"Battery level : {res.payload.level}")
+
         case "reboot" :
             res = await mc.commands.reboot()
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "send" :
             argnum = 2
             res = await mc.commands.send_msg(bytes.fromhex(cmds[1]), cmds[2])
@@ -310,6 +319,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Message sent")
+
         case "msg" | "sendto" | "m" | "{" : # sends to a contact from name
             argnum = 2
             await mc.ensure_contacts()
@@ -322,6 +332,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else :
                 print("Message sent")
+
         case "chan_msg"|"ch" :
             argnum = 2
             res = await mc.commands.send_chan_msg(int(cmds[1]), cmds[2])
@@ -332,6 +343,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Message sent")
+
         case "def_chan_msg"|"def_chan"|"dch" : # default chan
             argnum = 1
             res = await mc.commands.send_chan_msg(0, cmds[1])
@@ -340,6 +352,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error sending message: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "cmd" | "c" | "[" :
             argnum = 2
             await mc.ensure_contacts()
@@ -350,6 +363,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error sending cmd: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "login" | "l" | "[[" :
             argnum = 2
             await mc.ensure_contacts()
@@ -360,6 +374,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error while loging: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "logout" :
             argnum = 1
             await mc.ensure_contacts()
@@ -370,6 +385,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error while logout: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "req_status" | "rs" :
             argnum = 1
             await mc.ensure_contacts()
@@ -380,6 +396,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error while requesting status: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "contacts" | "lc":
             res = await mc.commands.get_contacts()
             logger.debug(json.dumps(res.payload,indent=4))
@@ -387,6 +404,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error asking for contacts: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "change_path" | "cp":
             argnum = 2 
             await mc.ensure_contacts()
@@ -398,6 +416,7 @@ async def next_cmd(mc, cmds, json_output=False):
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             await mc.commands.get_contacts()
+
         case "reset_path" | "rp" :
             argnum = 1
             await mc.ensure_contacts()
@@ -409,6 +428,7 @@ async def next_cmd(mc, cmds, json_output=False):
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             await mc.commands.get_contacts()
+
         case "share_contact" | "sc":
             argnum = 1
             await mc.ensure_contacts()
@@ -419,6 +439,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error while sharing contact: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "export_contact"|"ec":
             argnum = 1
             await mc.ensure_contacts()
@@ -431,6 +452,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else :
                 print(res.payload)
+
         case "export_myself"|"e":
             res = await mc.commands.export_contact()
             logger.debug(res)
@@ -440,6 +462,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(json.dumps(res.payload, indent=4))
             else :
                 print(res.payload)
+
         case "remove_contact" :
             argnum = 1
             await mc.ensure_contacts()
@@ -450,6 +473,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error removing contact: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "recv" | "r" :
             res = await mc.commands.get_msg()
             logger.debug(res)
@@ -457,6 +481,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 print(f"Error retreiving msg: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "sync_msgs" | "sm":
             while True:
                 res = await mc.commands.get_msg()
@@ -478,27 +503,33 @@ async def next_cmd(mc, cmds, json_output=False):
                     else:
                         name = ct["adv_name"]
                     print(f"{name}: {data['text']}")
+
         case "infos" | "i" :
             print(json.dumps(mc.self_info,indent=4))
+
         case "advert" | "a":
             res = await mc.commands.send_advert()
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "flood_advert":
             res = await mc.commands.send_advert(flood=True)
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "sleep" | "s" :
             argnum = 1
             await asyncio.sleep(int(cmds[1]))
+
         case "wait_msg" | "wm" :
             await mc.wait_for_event(EventType.MESSAGES_WAITING)
             res = await mc.commands.get_msg()
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "trywait_msg" | "wmt" :
             argnum = 1
             if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=int(cmds[1])) :
@@ -506,38 +537,46 @@ async def next_cmd(mc, cmds, json_output=False):
                 logger.debug(res)
                 if json_output :
                     print(json.dumps(res.payload, indent=4))
+
         case "wmt8"|"]":
             if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=8) :
                 res = await mc.commands.get_msg()
                 logger.debug(res)
                 if json_output :
                     print(json.dumps(res.payload, indent=4))
+
         case "wait_ack" | "wa" | "}":
             res = await mc.wait_for_event(EventType.ACK, timeout = 5)
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "wait_login" | "wl" | "]]":
             res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "wait_status" | "ws" :
             res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case "msgs_subscribe" | "ms" :
             await subscribe_to_msgs(mc)
+
         case "interactive" | "im" | "chat" :
             await subscribe_to_msgs(mc)
             await interactive_loop(mc)
+
         case "cli" | "@" :
             argnum = 1
             res = await mc.commands.send_cli(cmds[1])
             logger.debug(res)
             if json_output :
                 print(json.dumps(res.payload, indent=4))
+
         case _ :
             if cmds[0][0] == "@" :
                 res = await mc.commands.send_cli(cmds[0][1:])
