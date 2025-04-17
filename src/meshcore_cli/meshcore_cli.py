@@ -804,6 +804,7 @@ async def process_cmds (mc, args, json_output=False) :
 def command_help():
     print("""  General commands
     chat                   : enter the chat (interactive) mode
+    chat_to <ct>           : enter chat with contact                to
     infos                  : print informations about the node      i
     card                   : export this node URI                   e
     ver                    : firmware version                       v
@@ -832,7 +833,7 @@ def command_help():
     export_contact <ct>    : get a contact's URI                    ec
     remove_contact <ct>    : removes a contact from this node
     reset_path <ct>        : resets path to a contact to flood      rp
-    change_path <ct> <path>: change the path to a contact           cp
+    change_path <ct> <pth> : change the path to a contact           cp
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l  [[ 
     wait_login             : wait for login (timeouts after 5sec)   wl ]]
