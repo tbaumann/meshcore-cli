@@ -415,7 +415,7 @@ async def next_cmd(mc, cmds, json_output=False):
                     elif json_output :
                         print(json.dumps(res.payload, indent=4))
                     else:
-                        print(f"Battery level : {res.payload.level}")
+                        print(f"Battery level : {res.payload['level']}")
 
         case "reboot" :
             res = await mc.commands.reboot()
