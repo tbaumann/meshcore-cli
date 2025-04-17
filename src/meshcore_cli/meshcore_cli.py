@@ -570,12 +570,17 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
             logger.debug(res)
             if res is None:
-                print("Timeout waiting login response")
+                print("Login failed : Timeout waiting response")
             elif json_output :
                 if res.type == EventType.LOGIN_SUCCESS:
                     print(json.dumps({"login_success" : True}, indent=4))
                 else:
                     print(json.dumps({"login_success" : False}, indent=4))
+            else:
+                if res.type == EventType.LOGIN_SUCCESS:
+                    print("Login success")
+                else:
+                    print("Login failed")
 
         case "wait_status" | "ws" :
             res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
