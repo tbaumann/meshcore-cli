@@ -72,7 +72,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             elif line.startswith(".") or\
                     line.startswith("set ") or\
                     line.startswith("get ") or\
-                    line.startswith("public") or\
                     line.startswith("clock") or\
                     line.startswith("time") or\
                     line.startswith("ver") or\
@@ -82,6 +81,10 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("chan") or\
                     line.startswith("card") : # terminal chat commands
                 args = shlex.split(line)
+                await process_cmds(mc, args)
+
+            elif line.startswith("public "):
+                args = ["public", line[7:]]
                 await process_cmds(mc, args)
 
             elif line.startswith("to ") : # dest
@@ -129,9 +132,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 exp_ack = result.payload["expected_ack"].hex()
                 res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
                 if res is None :
-                    print ("#", end="")
-                else :
-                    print ("~", end="")
+                    print ("!", end="")
 
     except KeyboardInterrupt:
         mc.stop()
@@ -141,11 +142,16 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         print("Exiting cli")
 
 def print_above(str):
+    width = os.get_terminal_size().columns
+    lines = divmod(len(str), width)[0] + 1
     print("\u001B[s", end="")                   # Save current cursor position
     print("\u001B[A", end="")                   # Move cursor up one line
     print("\u001B[999D", end="")                # Move cursor to beginning of line
-    print("\u001B[S", end="")                   # Scroll up/pan window down 1 line
-    print("\u001B[L", end="")                   # Insert new line
+    for _ in range(lines):
+        print("\u001B[S", end="")                   # Scroll up/pan window down 1 line
+        print("\u001B[L", end="")                   # Insert new line
+    for _ in range(lines - 1):
+        print("\u001B[A", end="")                   # Move cursor up one line
     print(str, end="")                          # Print output status msg
     print("\u001B[u", end="", flush=True)       # Jump back to saved cursor position
 
@@ -173,7 +179,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             else :
                 path_str = str(data['path_len'])
             if above:
-                print_above(f"{name}({path_str}): {data['text']}")
+                print_above(f" {name}({path_str}): {data['text']}")
             else:
                 print(f"{name}({path_str}): {data['text']}")
         elif (data['type'] == "CHAN") :
@@ -182,7 +188,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             else :
                 path_str = str(data['path_len'])
             if above:
-                print_above(f"ch{data['channel_idx']}({path_str}): {data['text']}")
+                print_above(f" ch{data['channel_idx']}({path_str}): {data['text']}")
             else:
                 print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
         else:
