@@ -48,14 +48,17 @@ async def subscribe_to_msgs(mc):
         CS = mc.subscribe(EventType.CHANNEL_MSG_RECV, handle_message)
     await mc.start_auto_message_fetching()
 
-async def interactive_loop(mc) :
+async def interactive_loop(mc, to=None) :
     print("""Interactive mode, most commands from terminal chat should work.
 Use \"to\" to selects contact, \"list\" to list contacts, \"send\" to send a message ...
 Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\" or \"q\" will end interactive mode""")
 
     await mc.ensure_contacts()
-    contact = next(iter(mc.contacts.items()))[1]
+    if to is None:
+        contact = next(iter(mc.contacts.items()))[1]
+    else:
+        contact = to
 
     try:
         while True:
@@ -749,6 +752,13 @@ async def next_cmd(mc, cmds, json_output=False):
         case "interactive" | "im" | "chat" :
             await subscribe_to_msgs(mc)
             await interactive_loop(mc)
+
+        case "chat_to" | "to" :
+            argnum = 1
+            await mc.ensure_contacts()
+            contact = mc.get_contact_by_name(cmds[1])
+            await subscribe_to_msgs(mc)
+            await interactive_loop(mc, to=contact)
 
         case "cli" | "@" :
             argnum = 1
