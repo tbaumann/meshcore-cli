@@ -40,6 +40,7 @@ async def handle_message(event):
 
 async def subscribe_to_msgs(mc):
     global PS, CS
+    await mc.ensure_contacts()
     # Subscribe to private messages
     if PS is None :
         PS = mc.subscribe(EventType.CONTACT_MSG_RECV, handle_message)
@@ -55,12 +56,18 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\" or \"q\" will end interactive mode""")
 
     await mc.ensure_contacts()
+    await subscribe_to_msgs(mc)
     if to is None:
         contact = next(iter(mc.contacts.items()))[1]
     else:
         contact = to
 
     try:
+        while True: # purge msgs
+            res = await mc.commands.get_msg()
+            if res.type == EventType.NO_MORE_MSGS:
+                break
+
         while True:
             print(f"{contact['adv_name']}> ", end="", flush=True)
             line = (await asyncio.to_thread(sys.stdin.readline)).rstrip('\n')
@@ -750,14 +757,12 @@ async def next_cmd(mc, cmds, json_output=False):
             await subscribe_to_msgs(mc)
 
         case "interactive" | "im" | "chat" :
-            await subscribe_to_msgs(mc)
             await interactive_loop(mc)
 
         case "chat_to" | "to" :
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            await subscribe_to_msgs(mc)
             await interactive_loop(mc, to=contact)
 
         case "cli" | "@" :
