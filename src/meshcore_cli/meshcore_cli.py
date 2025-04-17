@@ -378,11 +378,11 @@ async def next_cmd(mc, cmds, json_output=False):
             match cmds[1]:
                 case "help":
                     print("""Gets parameters from node
- name : node name
- bat : battery level in mV
+ name   : node name
+ bat    : battery level in mV
  coords : adv coordinates
- radio : radio parameters
- tx : tx power""")
+ radio  : radio parameters
+ tx     : tx power""")
                 case "name":
                     if json_output :
                         print(json.dumps(mc.self_info["name"]))
@@ -427,13 +427,19 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 2
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.send_msg(contact, cmds[2])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending message: {res}")
-            elif json_output :
-                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-                print(json.dumps(res.payload, indent=4))
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.send_msg(contact, cmds[2])
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error sending message: {res}")
+                elif json_output :
+                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                    print(json.dumps(res.payload, indent=4))
 
         case "chan"|"ch" :
             argnum = 2
@@ -457,28 +463,40 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 2
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.send_cmd(contact, cmds[2])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending cmd: {res}")
-            elif json_output :
-                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-                print(json.dumps(res.payload, indent=4))
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.send_cmd(contact, cmds[2])
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error sending cmd: {res}")
+                elif json_output :
+                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                    print(json.dumps(res.payload, indent=4))
 
         case "login" | "l" | "[[" :
             argnum = 2
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.send_login(contact, cmds[2])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
+            if contact is None:
                 if json_output :
-                    print(json.dumps({"error" : "Error while login"}))
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
                 else:
-                    print(f"Error while loging: {res}")
-            elif json_output :
-                res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-                print(json.dumps(res.payload, indent=4))
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.send_login(contact, cmds[2])
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    if json_output :
+                        print(json.dumps({"error" : "Error while login"}))
+                    else:
+                        print(f"Error while loging: {res}")
+                elif json_output :
+                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                    print(json.dumps(res.payload, indent=4))
 
         case "logout" :
             argnum = 1
@@ -517,49 +535,73 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 2 
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.change_contact_path(contact, cmds[2])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error setting path: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            await mc.commands.get_contacts()
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.change_contact_path(contact, cmds[2])
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error setting path: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                await mc.commands.get_contacts()
 
         case "reset_path" | "rp" :
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.reset_path(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error resetting path: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            await mc.commands.get_contacts()
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.reset_path(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error resetting path: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                await mc.commands.get_contacts()
 
         case "share_contact" | "sc":
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.share_contact(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error while sharing contact: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.share_contact(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while sharing contact: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
 
         case "export_contact"|"ec":
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.export_contact(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error exporting contact: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else :
-                print(res.payload)
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.export_contact(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error exporting contact: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                else :
+                    print(res.payload)
 
         case "card" :
             res = await mc.commands.export_contact()
@@ -575,12 +617,18 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.remove_contact(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error removing contact: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
+            if contact is None:
+                if json_output :
+                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                else:
+                    print(f"Unknown contact {cmds[1]}")
+            else:
+                res = await mc.commands.remove_contact(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error removing contact: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
 
         case "recv" | "r" :
             res = await mc.commands.get_msg()
@@ -665,6 +713,8 @@ async def next_cmd(mc, cmds, json_output=False):
                     print("Timeout waiting ack")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
+            else :
+                print("Msg acked")
 
         case "wait_login" | "wl" | "]]":
             res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
