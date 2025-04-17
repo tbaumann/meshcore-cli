@@ -155,9 +155,17 @@ async def process_event_message(mc, ev, json_output, end="\n"):
                 name = data["pubkey_prefix"]
             else:
                 name = ct["adv_name"]
-            print(f"{name}({"D" if data['path_len'] == 255 else str(data['path_len'])}): {data['text']}")
+            if data['path_len'] == 255 :
+                path_str = "D"
+            else :
+                path_str = str(data['path_len'])
+            print(f"{name}({path_str}): {data['text']}")
         elif (data['type'] == "CHAN") :
-            print(f"ch{data['channel_idx']}({"D" if data['path_len'] == 255 else data['path_len']}): {data['text']}")
+            if data['path_len'] == 255 :
+                path_str = "D"
+            else :
+                path_str = str(data['path_len'])
+            print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
         else:
             print(json.dumps(ev.payload))
     return True
