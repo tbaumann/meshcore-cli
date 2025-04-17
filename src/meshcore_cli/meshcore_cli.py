@@ -49,7 +49,10 @@ async def subscribe_to_msgs(mc):
     await mc.start_auto_message_fetching()
 
 async def interactive_loop(mc) :
-    print("Interactive mode, use \"to\" to selects contact, \"lc\" to list contacts, \"$\" to issue a command.\n You can send messages using the \"send\" command, a quote, or write your message after the prompt.\n \"quit\" or \"q\" will end interactive mode")
+    print("""Interactive mode, most commands from terminal chat should work.
+Use \"to\" to selects contact, \"list\" to list contacts, \"send\" to send a message ...
+Line starting with \"$\" or \".\" will issue a meshcli command.
+\"quit\" or \"q\" will end interactive mode""")
 
     await mc.ensure_contacts()
     contact = next(iter(mc.contacts.items()))[1]
@@ -75,6 +78,7 @@ async def interactive_loop(mc) :
                     line.startswith("ver") or\
                     line.startswith("reboot") or\
                     line.startswith("advert") or\
+                    line.startswith("floodadv") or\
                     line.startswith("chan") or\
                     line.startswith("card") : # terminal chat commands
                 args = shlex.split(line)
@@ -179,6 +183,9 @@ async def next_cmd(mc, cmds, json_output=False):
     else:
         cmd = cmds[0]
     match cmd :
+        case "help" :
+            command_help()
+
         case "ver" | "v" :
             res = await mc.commands.send_device_query()
             logger.debug(res)
@@ -201,7 +208,10 @@ async def next_cmd(mc, cmds, json_output=False):
                 res = await mc.commands.set_time(int(time.time()))
                 logger.debug(res)
                 if res.type == EventType.ERROR:
-                    print(f"Error setting time: {res}")
+                    if json_output :
+                        print(json.dumps({"error" : "Error syncing time"}))
+                    else:
+                        print(f"Error setting time: {res}")
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
                 else :
@@ -222,7 +232,10 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.commands.set_time(int(time.time()))
             logger.debug(res)
             if res.type == EventType.ERROR:
-                print(f"Error syncing time: {res}")
+                if json_output :
+                    print(json.dumps({"error" : "Error syncing time"}))
+                else:
+                    print(f"Error syncing time: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             else:
@@ -233,7 +246,10 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.commands.set_time(cmds[1])
             logger.debug(res)
             if res.type == EventType.ERROR:
-                print (f"Error setting time: {res}")
+                if json_output :
+                    print(json.dumps({"error" : "Error setting time"}))
+                else:
+                    print (f"Error setting time: {res}")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
             else:
@@ -435,7 +451,10 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.commands.send_login(contact, cmds[2])
             logger.debug(res)
             if res.type == EventType.ERROR:
-                print(f"Error while loging: {res}")
+                if json_output :
+                    print(json.dumps({"error" : "Error while login"}))
+                else:
+                    print(f"Error while loging: {res}")
             elif json_output :
                 res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                 print(json.dumps(res.payload, indent=4))
@@ -579,7 +598,7 @@ async def next_cmd(mc, cmds, json_output=False):
             else:
                 print("Advert sent")
 
-        case "flood_advert":
+        case "flood_advert" | "floodadv":
             res = await mc.commands.send_advert(flood=True)
             logger.debug(res)
             if res.type == EventType.ERROR:
@@ -619,7 +638,10 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.wait_for_event(EventType.ACK, timeout = 5)
             logger.debug(res)
             if res is None:
-                print("Timeout waiting ack")
+                if json_output :
+                    print(json.dumps({"error" : "Timeout waiting ack"}))
+                else:
+                    print("Timeout waiting ack")
             elif json_output :
                 print(json.dumps(res.payload, indent=4))
 
@@ -632,7 +654,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.LOGIN_SUCCESS:
                     print(json.dumps({"login_success" : True}, indent=4))
                 else:
-                    print(json.dumps({"login_success" : False}, indent=4))
+                    print(json.dumps({"login_success" : False, "error" : "login failed"}, indent=4))
             else:
                 if res.type == EventType.LOGIN_SUCCESS:
                     print("Login success")
@@ -643,7 +665,10 @@ async def next_cmd(mc, cmds, json_output=False):
             res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
             logger.debug(res)
             if res is None:
-                print("Timeout waiting status")
+                if json_output :
+                    print(json.dumps({"error" : "Timeout waiting status"}))
+                else:
+                    print("Timeout waiting status")
             else :
                 print(json.dumps(res.payload, indent=4))
 
@@ -695,6 +720,46 @@ async def process_cmds (mc, args, json_output=False) :
     if json_output :
         print("]")
 
+def command_help():
+    print("""  General commands
+    chat                   : enter the chat (interactive) mode
+    infos                  : print informations about the node      i
+    card                   : export this node URI                   e
+    ver                    : firmware version                       v
+    reboot                 : reboots node
+    sleep <secs>           : sleeps for a given amount of secs      s
+  Messenging
+    msg <name> <msg>       : send message to node by name           m  {
+    wait_ack               : wait an ack                            wa }
+    chan <nb> <msg>        : send message to channel number <nb>    ch
+    public                 : send message to public channel (0)     dch
+    recv                   : reads next msg                         r
+    sync_msgs              : gets all unread msgs from the node     sm
+    wait_msg               : wait for a message and read it         wm
+  Management
+    advert                 : sends advert                           a
+    floodadv               : flood advert
+    get <param>            : gets a param, \"get help\" for more
+    set <param> <value>    : sets a param, \"set help\" for more 
+    time <epoch>           : sets time to given epoch
+    clock                  : get current time
+    clock sync             : sync device clock                      st
+    cli                    : send a cmd to node's cli (if avail)    @
+  Contacts
+    contacts / list        : gets contact list                      lc
+    share_contact <ct>     : share a contact with others            sc
+    export_contact <ct>    : get a contact's URI                    ec
+    remove_contact <ct>    : removes a contact from this node
+    reset_path <ct>        : resets path to a contact to flood      rp
+    change_path <ct> <path>: change the path to a contact           cp
+  Repeaters
+    login <name> <pwd>     : log into a node (rep) with given pwd   l  [[ 
+    wait_login             : wait for login (timeouts after 5sec)   wl ]]
+    cmd <name> <cmd>       : sends a command to a repeater (no ack) c  [
+    wmt8                   : wait for a msg (reply) with a timeout     ]
+    req_status <name>      : requests status from a node            rs
+    wait_status            : wait and print reply                   ws""")
+
 def usage () :
     """ Prints some help """
     print("""meshcore-cli : CLI interface to MeschCore BLE companion app
@@ -711,34 +776,9 @@ def usage () :
     -s <port>       : use serial port <port>
     -b <baudrate>   : specify baudrate
 
- Available Commands and shorcuts (can be chained) :
-    infos                  : print informations about the node      i 
-    reboot                 : reboots node                             
-    send <key> <msg>       : sends msg to node using pubkey[0:6]
-    sendto <name> <msg>    : sends msg to node with given name        
-    msg <name> <msg>       : same as sendto                         m 
-    wait_ack               : wait an ack for last sent msg          wa
-    recv                   : reads next msg                         r 
-    sync_msgs              : gets all unread msgs from the node     sm
-    wait_msg               : wait for a message and read it         wm
-    advert                 : sends advert                           a 
-    contacts               : gets contact list                      lc
-    share_contact <ct>     : share a contact with others            sc
-    remove_contact <ct>    : removes a contact from this node         
-    reset_path <ct>        : resets path to a contact to flood      rp
-    change_path <ct> <path>: change the path to a contact           cp
-    get_time               : gets current time                        
-    set_time <epoch>       : sets time to given epoch                 
-    sync_time              : sync time with system                    
-    set_name <name>        : sets node name                           
-    get_bat                : gets battery level                     b 
-    login <name> <pwd>     : log into a node (rep) with given pwd   l 
-    wait_login             : wait for login (timeouts after 5sec)   wl
-    cmd <name> <cmd>       : sends a command to a repeater (no ack) c 
-    req_status <name>      : requests status from a node            rs
-    wait_status            : wait and print reply                   ws
-    sleep <secs>           : sleeps for a given amount of secs      s""") 
-                        
+ Available Commands and shorcuts (can be chained) :""") 
+    command_help()
+
 async def main(argv):   
     """ Do the job """  
     global MC
