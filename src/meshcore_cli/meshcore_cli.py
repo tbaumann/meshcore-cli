@@ -36,7 +36,7 @@ CS = None
 
 # Subscribe to incoming messages
 async def handle_message(event):
-    await process_event_message(MC, event, False)
+    await process_event_message(MC, event, False, above=True)
 
 async def subscribe_to_msgs(mc):
     global PS, CS
@@ -140,7 +140,16 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
         print("Exiting cli")
 
-async def process_event_message(mc, ev, json_output, end="\n"):
+def print_above(str):
+    print("\u001B[s", end="")                   # Save current cursor position
+    print("\u001B[A", end="")                   # Move cursor up one line
+    print("\u001B[999D", end="")                # Move cursor to beginning of line
+    print("\u001B[S", end="")                   # Scroll up/pan window down 1 line
+    print("\u001B[L", end="")                   # Insert new line
+    print(str, end="")                          # Print output status msg
+    print("\u001B[u", end="", flush=True)       # Jump back to saved cursor position
+
+async def process_event_message(mc, ev, json_output, end="\n", above=False):
     if ev.type == EventType.NO_MORE_MSGS:
         logger.debug("No more messages")
         return False
@@ -163,13 +172,19 @@ async def process_event_message(mc, ev, json_output, end="\n"):
                 path_str = "D"
             else :
                 path_str = str(data['path_len'])
-            print(f"{name}({path_str}): {data['text']}")
+            if above:
+                print_above(f"{name}({path_str}): {data['text']}")
+            else:
+                print(f"{name}({path_str}): {data['text']}")
         elif (data['type'] == "CHAN") :
             if data['path_len'] == 255 :
                 path_str = "D"
             else :
                 path_str = str(data['path_len'])
-            print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
+            if above:
+                print_above(f"ch{data['channel_idx']}({path_str}): {data['text']}")
+            else:
+                print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
         else:
             print(json.dumps(ev.payload))
     return True
