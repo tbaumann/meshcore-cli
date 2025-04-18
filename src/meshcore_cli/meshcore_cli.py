@@ -272,8 +272,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
             elif line == "list" : # list command from chat displays contacts on a line
                 it = iter(mc.contacts.items())
-                c = next(it)
-                print (c[1]["adv_name"], end="")
                 for c in it :
                     print(f", {c[1]['adv_name']}", end="")
                 print("")
@@ -304,408 +302,419 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
-    argnum = 0
-    if cmds[0].startswith(".") : # override json_output
-        json_output = True
-        cmd = cmds[0][1:]
-    else:
-        cmd = cmds[0]
-    match cmd :
-        case "help" :
-            command_help()
+    try :
+        argnum = 0
+        if cmds[0].startswith(".") : # override json_output
+            json_output = True
+            cmd = cmds[0][1:]
+        else:
+            cmd = cmds[0]
+        match cmd :
+            case "help" :
+                command_help()
 
-        case "ver" | "query" | "v" | "q":
-            res = await mc.commands.send_device_query()
-            logger.debug(res)
-            if res.type == EventType.ERROR :
-                print(f"ERROR: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else :
-                print("Devince info :")
-                if res.payload["fw ver"] >= 3:
-                    print(f" Model: {res.payload['model']}")
-                    print(f" Version: {res.payload['ver']}")
-                    print(f" Build date: {res.payload['fw_build']}")
+            case "ver" | "query" | "v" | "q":
+                res = await mc.commands.send_device_query()
+                logger.debug(res)
+                if res.type == EventType.ERROR :
+                    print(f"ERROR: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
                 else :
-                    print(f" Firmware version : {res.payload['fw ver']}")
+                    print("Devince info :")
+                    if res.payload["fw ver"] >= 3:
+                        print(f" Model: {res.payload['model']}")
+                        print(f" Version: {res.payload['ver']}")
+                        print(f" Build date: {res.payload['fw_build']}")
+                    else :
+                        print(f" Firmware version : {res.payload['fw ver']}")
 
-        case "clock" :
-            if len(cmds) > 1 and cmds[1] == "sync" :
-                argnum=1
+            case "clock" :
+                if len(cmds) > 1 and cmds[1] == "sync" :
+                    argnum=1
+                    res = await mc.commands.set_time(int(time.time()))
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        if json_output :
+                            print(json.dumps({"error" : "Error syncing time"}))
+                        else:
+                            print(f"Error setting time: {res}")
+                    elif json_output :
+                        res.payload["ok"] = "time synced"
+                        print(json.dumps(res.payload, indent=4))
+                    else :
+                        print("Time synced")
+                else:
+                    res = await mc.commands.get_time()
+                    timestamp = res.payload["time"]
+                    if res.type == EventType.ERROR:
+                        print(f"Error getting time: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+                    else :
+                        print('Current time :'
+                            f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
+                            f' ({timestamp})')
+
+            case "sync_time"|"clock sync"|"st": # keep if for the st shortcut
                 res = await mc.commands.set_time(int(time.time()))
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     if json_output :
                         print(json.dumps({"error" : "Error syncing time"}))
                     else:
-                        print(f"Error setting time: {res}")
+                        print(f"Error syncing time: {res}")
                 elif json_output :
                     res.payload["ok"] = "time synced"
                     print(json.dumps(res.payload, indent=4))
-                else :
+                else:
                     print("Time synced")
-            else:
-                res = await mc.commands.get_time()
-                timestamp = res.payload["time"]
+
+            case "time" :
+                argnum = 1
+                res = await mc.commands.set_time(cmds[1])
+                logger.debug(res)
                 if res.type == EventType.ERROR:
-                    print(f"Error getting time: {res}")
+                    if json_output :
+                        print(json.dumps({"error" : "Error setting time"}))
+                    else:
+                        print (f"Error setting time: {res}")
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
-                else :
-                    print('Current time :'
-                        f' {datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")}'
-                        f' ({timestamp})')
-
-        case "sync_time"|"clock sync"|"st": # keep if for the st shortcut
-            res = await mc.commands.set_time(int(time.time()))
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                if json_output :
-                    print(json.dumps({"error" : "Error syncing time"}))
                 else:
-                    print(f"Error syncing time: {res}")
-            elif json_output :
-                res.payload["ok"] = "time synced"
-                print(json.dumps(res.payload, indent=4))
-            else:
-                print("Time synced")
+                    print("Time set")
 
-        case "time" :
-            argnum = 1
-            res = await mc.commands.set_time(cmds[1])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
+            case "set":
+                argnum = 2
+                match cmds[1]:
+                    case "help" :
+                        argnum = 1
+                        print("""Available parameters :
+    pin <pin>               : ble pin
+    radio <freq,bw,sf,cr>   : radio params 
+    tuning <rx_dly,af>      : tuning params
+    tx <dbm>                : tx power
+    name <name>             : node name
+    lat <lat>               : latitude
+    lon <lon>               : longitude
+    coords <lat,lon>        : coordinates""")
+                    case "pin":
+                        res = await mc.commands.set_devicepin(cmds[2])
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "radio":
+                        params=cmds[2].split(",")
+                        res=await mc.commands.set_radio(params[0], params[1], params[2], params[3])
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "name":
+                        res = await mc.commands.set_name(cmds[2])
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "tx":
+                        res = await mc.commands.set_tx_power(cmds[2])
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "lat":
+                        res = await mc.commands.set_coords(\
+                                float(cmds[2]),\
+                                mc.self_infos['adv_lon'])
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "lon":
+                        res = await mc.commands.set_coords(\
+                                mc.self_infos['adv_lat'],\
+                                float(cmds[2]))
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "coords":
+                        params=cmds[2].commands.split(",")
+                        res = await mc.commands.set_coords(\
+                                float(params[0]),\
+                                float(params[1]))
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+                    case "tuning":
+                        params=cmds[2].commands.split(",")
+                        res = await mc.commands.set_tuning(
+                            int(params[0]), int(params[1]))
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error: {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print("ok")
+
+            case "get" :
+                argnum = 1
+                match cmds[1]:
+                    case "help":
+                        print("""Gets parameters from node
+    name   : node name
+    bat    : battery level in mV
+    coords : adv coordinates
+    radio  : radio parameters
+    tx     : tx power""")
+                    case "name":
+                        if json_output :
+                            print(json.dumps(mc.self_info["name"]))
+                        else:
+                            print(mc.self_info["name"])
+                    case "tx":
+                        if json_output :
+                            print(json.dumps(mc.self_info["tx_power"]))
+                        else:
+                            print(mc.self_info["tx_power"])
+                    case "coords":
+                        if json_output :
+                            print(json.dumps({"lat": mc.self_info["adv_lat"], "lon":mc.self_info["adv_lon"]}))
+                        else:
+                            print(print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}"))
+                    case "radio":
+                        if json_output :
+                            print(json.dumps(
+                            {"radio_freq": mc.self_info["radio_freq"],
+                                "radio_sf":   mc.self_info["radio_sf"],
+                                "radio_bw":   mc.self_info["radio_bw"],
+                                "radio_cr":   mc.self_info["radio_cr"]}))
+                        else:
+                            print(f"{mc.self_info['radio_freq']},{mc.self_info['radio_sf']},{mc.self_info['radio_bw']},{mc.self_info['radio_cr']}")
+                    case "bat" :
+                        res = await mc.commands.get_bat()
+                        logger.debug(res)
+                        if res.type == EventType.ERROR:
+                            print(f"Error getting bat {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print(f"Battery level : {res.payload['level']}")
+
+            case "reboot" :
+                res = await mc.commands.reboot()
+                logger.debug(res)
                 if json_output :
-                    print(json.dumps({"error" : "Error setting time"}))
+                    print(json.dumps(res.payload, indent=4))
+
+            case "msg" | "m" | "{" : # sends to a contact from name
+                argnum = 2
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
                 else:
-                    print (f"Error setting time: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else:
-                print("Time set")
+                    res = await mc.commands.send_msg(contact, cmds[2])
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error sending message: {res}")
+                    elif json_output :
+                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                        print(json.dumps(res.payload, indent=4))
 
-        case "set":
-            argnum = 2
-            match cmds[1]:
-                case "help" :
-                    argnum = 1
-                    print("""Available parameters :
- pin <pin>               : ble pin
- radio <freq,bw,sf,cr>   : radio params 
- tuning <rx_dly,af>      : tuning params
- tx <dbm>                : tx power
- name <name>             : node name
- lat <lat>               : latitude
- lon <lon>               : longitude
- coords <lat,lon>        : coordinates""")
-                case "pin":
-                    res = await mc.commands.set_devicepin(cmds[2])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "radio":
-                    params=cmds[2].split(",")
-                    res=await mc.commands.set_radio(params[0], params[1], params[2], params[3])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "name":
-                    res = await mc.commands.set_name(cmds[2])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "tx":
-                    res = await mc.commands.set_tx_power(cmds[2])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "lat":
-                    res = await mc.commands.set_coords(\
-                            float(cmds[2]),\
-                            mc.self_infos['adv_lon'])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "lon":
-                    res = await mc.commands.set_coords(\
-                            mc.self_infos['adv_lat'],\
-                            float(cmds[2]))
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "coords":
-                    params=cmds[2].commands.split(",")
-                    res = await mc.commands.set_coords(\
-                            float(params[0]),\
-                            float(params[1]))
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-                case "tuning":
-                    params=cmds[2].commands.split(",")
-                    res = await mc.commands.set_tuning(
-                        int(params[0]), int(params[1]))
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print("ok")
-
-        case "get" :
-            argnum = 1
-            match cmds[1]:
-                case "help":
-                    print("""Gets parameters from node
- name   : node name
- bat    : battery level in mV
- coords : adv coordinates
- radio  : radio parameters
- tx     : tx power""")
-                case "name":
-                    if json_output :
-                        print(json.dumps(mc.self_info["name"]))
-                    else:
-                        print(mc.self_info["name"])
-                case "tx":
-                    if json_output :
-                        print(json.dumps(mc.self_info["tx_power"]))
-                    else:
-                        print(mc.self_info["tx_power"])
-                case "coords":
-                    if json_output :
-                        print(json.dumps({"lat": mc.self_info["adv_lat"], "lon":mc.self_info["adv_lon"]}))
-                    else:
-                        print(print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}"))
-                case "radio":
-                    if json_output :
-                        print(json.dumps(
-                           {"radio_freq": mc.self_info["radio_freq"],
-                            "radio_sf":   mc.self_info["radio_sf"],
-                            "radio_bw":   mc.self_info["radio_bw"],
-                            "radio_cr":   mc.self_info["radio_cr"]}))
-                    else:
-                        print(f"{mc.self_info['radio_freq']},{mc.self_info['radio_sf']},{mc.self_info['radio_bw']},{mc.self_info['radio_cr']}")
-                case "bat" :
-                    res = await mc.commands.get_bat()
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error getting bat {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print(f"Battery level : {res.payload['level']}")
-
-        case "reboot" :
-            res = await mc.commands.reboot()
-            logger.debug(res)
-            if json_output :
-                print(json.dumps(res.payload, indent=4))
-
-        case "msg" | "m" | "{" : # sends to a contact from name
-            argnum = 2
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
-                else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.send_msg(contact, cmds[2])
+            case "chan"|"ch" :
+                argnum = 2
+                res = await mc.commands.send_chan_msg(int(cmds[1]), cmds[2])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error sending message: {res}")
                 elif json_output :
-                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                     print(json.dumps(res.payload, indent=4))
 
-        case "chan"|"ch" :
-            argnum = 2
-            res = await mc.commands.send_chan_msg(int(cmds[1]), cmds[2])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending message: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-
-        case "public" | "dch" : # default chan
-            argnum = 1
-            res = await mc.commands.send_chan_msg(0, cmds[1])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending message: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-
-        case "cmd" | "c" | "[" :
-            argnum = 2
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
-                else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.send_cmd(contact, cmds[2])
+            case "public" | "dch" : # default chan
+                argnum = 1
+                res = await mc.commands.send_chan_msg(0, cmds[1])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
-                    print(f"Error sending cmd: {res}")
+                    print(f"Error sending message: {res}")
                 elif json_output :
-                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                     print(json.dumps(res.payload, indent=4))
 
-        case "login" | "l" | "[[" :
-            argnum = 2
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
-                else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.send_login(contact, cmds[2])
-                logger.debug(res)
-                if res.type == EventType.ERROR:
+            case "cmd" | "c" | "[" :
+                argnum = 2
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
                     if json_output :
-                        print(json.dumps({"error" : "Error while login"}))
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
                     else:
-                        print(f"Error while loging: {res}")
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.send_cmd(contact, cmds[2])
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error sending cmd: {res}")
+                    elif json_output :
+                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                        print(json.dumps(res.payload, indent=4))
+
+            case "login" | "l" | "[[" :
+                argnum = 2
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.send_login(contact, cmds[2])
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        if json_output :
+                            print(json.dumps({"error" : "Error while login"}))
+                        else:
+                            print(f"Error while loging: {res}")
+                    elif json_output :
+                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+                        print(json.dumps(res.payload))
+
+            case "logout" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.send_logout(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while logout: {res}")
                 elif json_output :
-                    res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                     print(json.dumps(res.payload))
-
-        case "logout" :
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.send_logout(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error while logout: {res}")
-            elif json_output :
-                print(json.dumps(res.payload))
-            else:
-                print("Logout ok")
-
-        case "req_status" | "rs" :
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.commands.send_statusreq(contact)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error while requesting status: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-
-        case "contacts" | "list" | "lc":
-            res = await mc.commands.get_contacts()
-            logger.debug(json.dumps(res.payload,indent=4))
-            if res.type == EventType.ERROR:
-                print(f"Error asking for contacts: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else :
-                for c in res.payload.items():
-                    print(c[1]["adv_name"])
-
-        case "change_path" | "cp":
-            argnum = 2 
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
                 else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.change_contact_path(contact, cmds[2])
+                    print("Logout ok")
+
+            case "req_status" | "rs" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.send_statusreq(contact)
                 logger.debug(res)
                 if res.type == EventType.ERROR:
-                    print(f"Error setting path: {res}")
-                elif json_output :
-                    print(json.dumps(res.payload, indent=4))
-                await mc.commands.get_contacts()
-
-        case "reset_path" | "rp" :
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
-                else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.reset_path(contact)
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error resetting path: {res}")
-                elif json_output :
-                    print(json.dumps(res.payload, indent=4))
-                await mc.commands.get_contacts()
-
-        case "share_contact" | "sc":
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
-                else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.share_contact(contact)
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error while sharing contact: {res}")
+                    print(f"Error while requesting status: {res}")
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
 
-        case "export_contact"|"ec":
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+            case "contacts" | "list" | "lc":
+                res = await mc.commands.get_contacts()
+                logger.debug(json.dumps(res.payload,indent=4))
+                if res.type == EventType.ERROR:
+                    print(f"Error asking for contacts: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                else :
+                    for c in res.payload.items():
+                        print(c[1]["adv_name"])
+
+            case "change_path" | "cp":
+                argnum = 2 
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
                 else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.export_contact(contact)
+                    res = await mc.commands.change_contact_path(contact, cmds[2])
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error setting path: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+                    await mc.commands.get_contacts()
+
+            case "reset_path" | "rp" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.reset_path(contact)
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error resetting path: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+                    await mc.commands.get_contacts()
+
+            case "share_contact" | "sc":
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.share_contact(contact)
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error while sharing contact: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+
+            case "export_contact"|"ec":
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.export_contact(contact)
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error exporting contact: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload))
+                    else :
+                        print(res.payload['uri'])
+
+            case "card" :
+                res = await mc.commands.export_contact()
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error exporting contact: {res}")
@@ -714,172 +723,151 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     print(res.payload['uri'])
 
-        case "card" :
-            res = await mc.commands.export_contact()
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error exporting contact: {res}")
-            elif json_output :
-                print(json.dumps(res.payload))
-            else :
-                print(res.payload['uri'])
-
-        case "remove_contact" :
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            if contact is None:
-                if json_output :
-                    print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+            case "remove_contact" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
                 else:
-                    print(f"Unknown contact {cmds[1]}")
-            else:
-                res = await mc.commands.remove_contact(contact)
+                    res = await mc.commands.remove_contact(contact)
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error removing contact: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+
+            case "recv" | "r" :
+                res = await mc.commands.get_msg()
+                logger.debug(res)
+                await process_event_message(mc, res, json_output)
+
+            case "sync_msgs" | "sm":
+                ret = True
+                first = True
+                if json_output :
+                    print("[", end="", flush=True)
+                    end=""
+                else:
+                    end="\n"
+                while ret:
+                    res = await mc.commands.get_msg()
+                    logger.debug(res)
+                    if res.type != EventType.NO_MORE_MSGS:
+                        if not first and json_output :
+                            print(",")
+                    ret = await process_event_message(mc, res, json_output,end=end)
+                    first = False
+                if json_output :
+                    print("]")
+
+            case "infos" | "i" :
+                print(json.dumps(mc.self_info,indent=4))
+
+            case "advert" | "a":
+                res = await mc.commands.send_advert()
                 logger.debug(res)
                 if res.type == EventType.ERROR:
-                    print(f"Error removing contact: {res}")
+                    print(f"Error sending advert: {res}")
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
-
-        case "recv" | "r" :
-            res = await mc.commands.get_msg()
-            logger.debug(res)
-            await process_event_message(mc, res, json_output)
-
-        case "sync_msgs" | "sm":
-            ret = True
-            first = True
-            if json_output :
-                print("[", end="", flush=True)
-                end=""
-            else:
-                end="\n"
-            while ret:
-                res = await mc.commands.get_msg()
-                logger.debug(res)
-                if res.type != EventType.NO_MORE_MSGS:
-                    if not first and json_output :
-                        print(",")
-                ret = await process_event_message(mc, res, json_output,end=end)
-                first = False
-            if json_output :
-                print("]")
-
-        case "infos" | "i" :
-            print(json.dumps(mc.self_info,indent=4))
-
-        case "advert" | "a":
-            res = await mc.commands.send_advert()
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending advert: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else:
-                print("Advert sent")
-
-        case "flood_advert" | "floodadv":
-            res = await mc.commands.send_advert(flood=True)
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending advert: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else:
-                print("Advert sent")
-
-        case "sleep" | "s" :
-            argnum = 1
-            await asyncio.sleep(int(cmds[1]))
-
-        case "wait_msg" | "wm" :
-            ev = await mc.wait_for_event(EventType.MESSAGES_WAITING)
-            if ev is None:
-                print("Timeout waiting msg")
-            else:
-                res = await mc.commands.get_msg()
-                logger.debug(res)
-                await process_event_message(mc, res, json_output)
-
-        case "trywait_msg" | "wmt" :
-            argnum = 1
-            if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=int(cmds[1])) :
-                res = await mc.commands.get_msg()
-                logger.debug(res)
-                await process_event_message(mc, res, json_output)
-
-        case "wmt8"|"]":
-            if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=8) :
-                res = await mc.commands.get_msg()
-                logger.debug(res)
-                await process_event_message(mc, res, json_output)
-
-        case "wait_ack" | "wa" | "}":
-            res = await mc.wait_for_event(EventType.ACK, timeout = 5)
-            logger.debug(res)
-            if res is None:
-                if json_output :
-                    print(json.dumps({"error" : "Timeout waiting ack"}))
                 else:
-                    print("Timeout waiting ack")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else :
-                print("Msg acked")
+                    print("Advert sent")
 
-        case "wait_login" | "wl" | "]]":
-            res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
-            logger.debug(res)
-            if res is None:
-                print("Login failed : Timeout waiting response")
-            elif json_output :
-                if res.type == EventType.LOGIN_SUCCESS:
-                    print(json.dumps({"login_success" : True}, indent=4))
+            case "flood_advert" | "floodadv":
+                res = await mc.commands.send_advert(flood=True)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error sending advert: {res}")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
                 else:
-                    print(json.dumps({"login_success" : False, "error" : "login failed"}, indent=4))
-            else:
-                if res.type == EventType.LOGIN_SUCCESS:
-                    print("Login success")
+                    print("Advert sent")
+
+            case "sleep" | "s" :
+                argnum = 1
+                await asyncio.sleep(int(cmds[1]))
+
+            case "wait_msg" | "wm" :
+                ev = await mc.wait_for_event(EventType.MESSAGES_WAITING)
+                if ev is None:
+                    print("Timeout waiting msg")
                 else:
-                    print("Login failed")
+                    res = await mc.commands.get_msg()
+                    logger.debug(res)
+                    await process_event_message(mc, res, json_output)
 
-        case "wait_status" | "ws" :
-            res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
-            logger.debug(res)
-            if res is None:
-                if json_output :
-                    print(json.dumps({"error" : "Timeout waiting status"}))
+            case "trywait_msg" | "wmt" :
+                argnum = 1
+                if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=int(cmds[1])) :
+                    res = await mc.commands.get_msg()
+                    logger.debug(res)
+                    await process_event_message(mc, res, json_output)
+
+            case "wmt8"|"]":
+                if await mc.wait_for_event(EventType.MESSAGES_WAITING, timeout=8) :
+                    res = await mc.commands.get_msg()
+                    logger.debug(res)
+                    await process_event_message(mc, res, json_output)
+
+            case "wait_ack" | "wa" | "}":
+                res = await mc.wait_for_event(EventType.ACK, timeout = 5)
+                logger.debug(res)
+                if res is None:
+                    if json_output :
+                        print(json.dumps({"error" : "Timeout waiting ack"}))
+                    else:
+                        print("Timeout waiting ack")
+                elif json_output :
+                    print(json.dumps(res.payload, indent=4))
+                else :
+                    print("Msg acked")
+
+            case "wait_login" | "wl" | "]]":
+                res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
+                logger.debug(res)
+                if res is None:
+                    print("Login failed : Timeout waiting response")
+                elif json_output :
+                    if res.type == EventType.LOGIN_SUCCESS:
+                        print(json.dumps({"login_success" : True}, indent=4))
+                    else:
+                        print(json.dumps({"login_success" : False, "error" : "login failed"}, indent=4))
                 else:
-                    print("Timeout waiting status")
-            else :
-                print(json.dumps(res.payload, indent=4))
+                    if res.type == EventType.LOGIN_SUCCESS:
+                        print("Login success")
+                    else:
+                        print("Login failed")
 
-        case "msgs_subscribe" | "ms" :
-            await subscribe_to_msgs(mc)
+            case "wait_status" | "ws" :
+                res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
+                logger.debug(res)
+                if res is None:
+                    if json_output :
+                        print(json.dumps({"error" : "Timeout waiting status"}))
+                    else:
+                        print("Timeout waiting status")
+                else :
+                    print(json.dumps(res.payload, indent=4))
 
-        case "interactive" | "im" | "chat" :
-            await interactive_loop(mc)
+            case "msgs_subscribe" | "ms" :
+                await subscribe_to_msgs(mc)
 
-        case "chat_to" | "imto" | "to" :
-            argnum = 1
-            await mc.ensure_contacts()
-            contact = mc.get_contact_by_name(cmds[1])
-            await interactive_loop(mc, to=contact)
+            case "interactive" | "im" | "chat" :
+                await interactive_loop(mc)
 
-        case "cli" | "@" :
-            argnum = 1
-            res = await mc.commands.send_cli(cmds[1])
-            logger.debug(res)
-            if res.type == EventType.ERROR:
-                print(f"Error sending cli cmd: {res}")
-            elif json_output :
-                print(json.dumps(res.payload, indent=4))
-            else:
-                print(f"{res.payload['response']}")
+            case "chat_to" | "imto" | "to" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                await interactive_loop(mc, to=contact)
 
-        case _ :
-            if cmd[0] == "@" :
-                res = await mc.commands.send_cli(cmd[1:])
+            case "cli" | "@" :
+                argnum = 1
+                res = await mc.commands.send_cli(cmds[1])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error sending cli cmd: {res}")
@@ -888,17 +876,32 @@ async def next_cmd(mc, cmds, json_output=False):
                 else:
                     print(f"{res.payload['response']}")
 
-            else :
-                await mc.ensure_contacts()
-                contact = mc.get_contact_by_name(cmds[0])
-                if contact is None:
-                    logger.error(f"Unknown command : {cmd}, will exit ...")
-                    return None
+            case _ :
+                if cmd[0] == "@" :
+                    res = await mc.commands.send_cli(cmd[1:])
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error sending cli cmd: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+                    else:
+                        print(f"{res.payload['response']}")
 
-                await interactive_loop(mc, to=contact)
-            
-    logger.debug(f"cmd {cmds[0:argnum+1]} processed ...")
-    return cmds[argnum+1:]
+                else :
+                    await mc.ensure_contacts()
+                    contact = mc.get_contact_by_name(cmds[0])
+                    if contact is None:
+                        logger.error(f"Unknown command : {cmd}, will exit ...")
+                        return None
+
+                    await interactive_loop(mc, to=contact)
+                
+        logger.debug(f"cmd {cmds[0:argnum+1]} processed ...")
+        return cmds[argnum+1:]
+
+    except IndexError:
+        logger.error("Error in parameters, returning")
+        return None
 
 async def process_cmds (mc, args, json_output=False) :
     cmds = args
