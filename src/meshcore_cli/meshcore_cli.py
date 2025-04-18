@@ -835,7 +835,13 @@ async def next_cmd(mc, cmds, json_output=False):
                     print(f"{res.payload['response']}")
 
             else :
-                logger.error(f"Unknown command : {cmd}")
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[0])
+                if contact is None:
+                    logger.error(f"Unknown command : {cmd}, will exit ...")
+                    return None
+
+                await interactive_loop(mc, to=contact)
             
     logger.debug(f"cmd {cmds[0:argnum+1]} processed ...")
     return cmds[argnum+1:]
@@ -845,7 +851,7 @@ async def process_cmds (mc, args, json_output=False) :
     first = True
     if json_output :
         print("[")
-    while len(cmds) > 0 :
+    while cmds and len(cmds) > 0 :
         if not first and json_output :
             print(",")
         cmds = await next_cmd(MC, cmds, json_output)
