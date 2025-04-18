@@ -513,7 +513,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         if json_output :
                             print(json.dumps({"lat": mc.self_info["adv_lat"], "lon":mc.self_info["adv_lon"]}))
                         else:
-                            print(print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}"))
+                            print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}")
                     case "radio":
                         if json_output :
                             print(json.dumps(
