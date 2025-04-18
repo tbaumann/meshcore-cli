@@ -8,6 +8,8 @@ import time, datetime
 import getopt, json, shlex
 import logging
 from pathlib import Path
+from prompt_toolkit.shortcuts import PromptSession
+from prompt_toolkit.completion import NestedCompleter
 
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
@@ -94,6 +96,45 @@ async def handle_message(event):
     """ Process incoming message events """
     await process_event_message(MC, event, False, above=True)
 
+def make_completion_dict(contacts):
+    contact_list = {}    
+    it = iter(contacts.items())
+    for c in it :
+        contact_list[c[1]['adv_name']] = None
+
+    completion_list = {
+        "to" : contact_list,
+        "send" : None,
+        "cmd" : None,
+        "public" : None,
+        "chan" : None,
+        "ver" : None,
+        "infos" : None,
+        "advert" : None,
+        "floodadv" : None,
+        "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, "name" : None, "lat" : None, "lon" : None, "coords" : None},
+        "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, "tx" : None},
+        "reboot" : None,
+        "card" : None,
+        "login" : None,
+        "logout" : None,
+        "req_status" : None,
+        "time" : None,
+        "clock" : {"sync" : None},
+        "ec" : None,
+        "rp" : None,
+        "cp" : None,
+        "cli" : None,
+        "$remove_contact" : contact_list,
+        "$msg" : contact_list,
+        "$cmd" : contact_list,
+        "$login" : contact_list,
+        "$logout" : contact_list,
+        "$wl" : contact_list,
+        "$ec" : contact_list
+    }
+    return completion_list
+
 # Subscribe to incoming messages
 async def subscribe_to_msgs(mc):
     global PS, CS
@@ -124,10 +165,21 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             res = await mc.commands.get_msg()
             if res.type == EventType.NO_MORE_MSGS:
                 break
+        
+        completion_dict = {
+            "to": None, 
+            "send": None,
+        }
+        completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
+        session = PromptSession(completer=completer)
 
+        last_ack = True
         while True:
-            print(f"{contact['adv_name']}> ", end="", flush=True)
-            line = (await asyncio.to_thread(sys.stdin.readline)).rstrip('\n')
+            prompt = ""
+            if not last_ack:
+                prompt = prompt + "!"
+            prompt = prompt + f"{contact['adv_name']}> "
+            line = await session.prompt_async(prompt, complete_while_typing=False)
 
             if line == "" : # blank line
                 pass
@@ -239,9 +291,11 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 exp_ack = result.payload["expected_ack"].hex()
                 res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
                 if res is None :
-                    print ("!", end="")
+                    last_ack = False
+                else:
+                    last_ack = True
 
-    except KeyboardInterrupt:
+    except (EOFError, KeyboardInterrupt):
         mc.stop()
         print("Exiting cli")
     except asyncio.CancelledError:

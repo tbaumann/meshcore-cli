@@ -17,7 +17,7 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
-dependencies = [ "meshcore >= 1.9.6" ]
+dependencies = [ "meshcore >= 1.9.6", "prompt_toolkit >= 3.0.50" ]
 
 [project.urls]
 Homepage = "https://github.com/fdlamotte/meshcore-cli"
