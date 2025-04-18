@@ -558,7 +558,7 @@ async def next_cmd(mc, cmds, json_output=False):
             argnum = 1
             await mc.ensure_contacts()
             contact = mc.get_contact_by_name(cmds[1])
-            res = await mc.send_logout(contact)
+            res = await mc.commands.send_logout(contact)
             logger.debug(res)
             if res.type == EventType.ERROR:
                 print(f"Error while logout: {res}")
