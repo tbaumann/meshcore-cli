@@ -552,7 +552,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(f"Error while loging: {res}")
                 elif json_output :
                     res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-                    print(json.dumps(res.payload, indent=4))
+                    print(json.dumps(res.payload))
 
         case "logout" :
             argnum = 1
@@ -563,7 +563,9 @@ async def next_cmd(mc, cmds, json_output=False):
             if res.type == EventType.ERROR:
                 print(f"Error while logout: {res}")
             elif json_output :
-                print(json.dumps(res.payload, indent=4))
+                print(json.dumps(res.payload))
+            else:
+                print("Logout ok")
 
         case "req_status" | "rs" :
             argnum = 1
@@ -984,7 +986,7 @@ async def main(argv):
         logger.setLevel(logging.ERROR)
 
     if len(args) == 0 : # no args, run in chat mode
-        await process_cmds(MC, "chat", json_output)
+        await process_cmds(MC, ["chat"], json_output)
     else:
         await process_cmds(MC, args, json_output)
 
