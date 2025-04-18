@@ -929,7 +929,7 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jD")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDh")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -948,10 +948,9 @@ async def main(argv):
                 json_output=True
             case "-D" :
                 debug=True
-
-    if len(args) == 0 : # no args, no action
-        usage()
-        return
+            case "-h" :
+                usage()
+                return
 
     if (debug==True):
         logger.setLevel(logging.DEBUG)
@@ -984,7 +983,10 @@ async def main(argv):
     if (json_output) :
         logger.setLevel(logging.ERROR)
 
-    await process_cmds(MC, args, json_output)
+    if len(args) == 0 : # no args, run in chat mode
+        await process_cmds(MC, "chat", json_output)
+    else:
+        await process_cmds(MC, args, json_output)
 
 def cli():
     try:
