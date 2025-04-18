@@ -3,26 +3,16 @@
     mccli.py : CLI interface to MeschCore BLE companion app
 """
 import asyncio
-import os
-import sys
-import getopt
-import json
-import datetime
-import time
-import shlex
+import os, sys
+import time, datetime
+import getopt, json, shlex
 import logging
 from pathlib import Path
 
-from meshcore import TCPConnection
-from meshcore import BLEConnection
-from meshcore import SerialConnection
-from meshcore import MeshCore
-from meshcore import EventType
-from meshcore import logger
+from meshcore import TCPConnection, BLEConnection, SerialConnection
+from meshcore import MeshCore, EventType, logger
 
-#logger.setLevel(logging.DEBUG)
-
-# default address is stored in a config file
+# default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
 MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 
@@ -271,7 +261,7 @@ async def next_cmd(mc, cmds, json_output=False):
         case "help" :
             command_help()
 
-        case "ver" | "v" :
+        case "ver" | "query" | "v" | "q":
             res = await mc.commands.send_device_query()
             logger.debug(res)
             if res.type == EventType.ERROR :
@@ -298,6 +288,7 @@ async def next_cmd(mc, cmds, json_output=False):
                     else:
                         print(f"Error setting time: {res}")
                 elif json_output :
+                    res.payload["ok"] = "time synced"
                     print(json.dumps(res.payload, indent=4))
                 else :
                     print("Time synced")
@@ -322,6 +313,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else:
                     print(f"Error syncing time: {res}")
             elif json_output :
+                res.payload["ok"] = "time synced"
                 print(json.dumps(res.payload, indent=4))
             else:
                 print("Time synced")
