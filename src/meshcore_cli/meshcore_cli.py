@@ -1076,7 +1076,7 @@ async def main(argv):
         logger.setLevel(logging.ERROR)
     else :
         if res.payload["fw ver"] > 2 :
-            logger.info(f"Connected to {MC.self_info['name']} running on a {res.payload["ver"]} fw.")
+            logger.info(f"Connected to {MC.self_info['name']} running on a {res.payload['ver']} fw.")
         else :    
             logger.info(f"Connected to {MC.self_info['name']}.")
 
