@@ -154,7 +154,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             # commands that take one parameter (don't need for quotes)
-            elif line.startswith("public "):
+            elif line.startswith("public ") or line.startswith("cli ") :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], cmds[1]]
                 await process_cmds(mc, args)
@@ -168,7 +168,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             # same but for commands with a parameter
-            elif line.startswith("cmd ") or line.startswith("cli ") or\
+            elif line.startswith("cmd ") or\
                     line.startswith("cp ") or line.startswith("change_path ") :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
@@ -192,7 +192,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             elif line.startswith("@") : # send a cli command that won't need quotes !
-                args=["cli", contact['adv_name'], line[1:]]
+                args=["cli", line[1:]]
                 await process_cmds(mc, args)
 
             elif line.startswith("to ") : # dest
