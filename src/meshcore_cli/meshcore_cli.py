@@ -162,9 +162,9 @@ async def subscribe_to_msgs(mc):
 
 async def interactive_loop(mc, to=None) :
     print("""Interactive mode, most commands from terminal chat should work.
-Use \"to\" to selects contact, \"list\" to list contacts, \"send\" to send a message ...
+Use \"to\" to select recipient, use Tab to complete name ...
 Line starting with \"$\" or \".\" will issue a meshcli command.
-\"quit\" or \"q\" will end interactive mode""")
+\"quit\", \"q\", CTRL+D will end interactive mode""")
 
     await mc.ensure_contacts()
     await subscribe_to_msgs(mc)
