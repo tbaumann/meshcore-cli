@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.history import FileHistory
 
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
@@ -17,6 +18,7 @@ from meshcore import MeshCore, EventType, logger
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
 MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
+MCCLI_HISTORY_FILE = MCCLI_CONFIG_DIR + "history"
 
 # Fallback address if config file not found
 # if None or "" then a scan is performed
@@ -170,8 +172,14 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             "to": None, 
             "send": None,
         }
+
         completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
-        session = PromptSession(completer=completer)
+        if os.path.isdir(MCCLI_CONFIG_DIR) :
+            our_history = FileHistory(MCCLI_HISTORY_FILE)
+        else:
+            our_history = None
+
+        session = PromptSession(completer=completer, history=our_history)
 
         last_ack = True
         while True:
