@@ -12,6 +12,7 @@ from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.shortcuts import CompleteStyle
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.formatted_text import HTML
 
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
@@ -200,9 +201,9 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         while True:
             prompt = ""
             if not last_ack:
-                prompt = prompt + f"!"
-            prompt = prompt + f"{contact['adv_name']}> "
-            line = await session.prompt_async(prompt, complete_while_typing=False)
+                prompt = prompt + f"<ansired>!</ansired>"
+            prompt = prompt + f"<ansiblue>{contact['adv_name']}></ansiblue> "
+            line = await session.prompt_async(HTML(prompt), complete_while_typing=False)
 
             if line == "" : # blank line
                 pass
