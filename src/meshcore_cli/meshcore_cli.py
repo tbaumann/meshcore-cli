@@ -200,7 +200,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
                     print(f"Contact '{dest}' not found in contacts.")
-                    return
                 else :
                     contact = nc
 
