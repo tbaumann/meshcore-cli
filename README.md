@@ -41,7 +41,7 @@ Arguments mostly deals with ble connection
 
 Commands are given after arguments, they can be chained and some have shortcuts. Also prefixing a command with a dot ```.``` will force it to output json instead of synthetic result.
 
- <pre>
+<pre>
    General commands
     chat                   : enter the chat (interactive) mode
     chat_to &lt;ct&gt;           : enter chat with contact                to

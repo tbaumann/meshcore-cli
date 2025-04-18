@@ -89,12 +89,52 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("advert") or\
                     line.startswith("floodadv") or\
                     line.startswith("chan") or\
-                    line.startswith("card") : # terminal chat commands
+                    line.startswith("card") : # commands are passed through
                 args = shlex.split(line)
                 await process_cmds(mc, args)
 
+            # commands that take one parameter (don't need for quotes)
             elif line.startswith("public "):
-                args = ["public", line[7:]]
+                cmds = line.split(" ", 1)
+                args = [cmds[0], cmds[1]]
+                await process_cmds(mc, args)
+
+            # commands that take contact as second arg will be sent to recipient
+            elif line.startswith("cmd ") or line.startswith("cli ") or\
+                    line.startswith("logout ") or\
+                    line.startswith("cp ") or line.startswith("change_path ") :
+                cmds = line.split(" ", 1)
+                args = [cmds[0], contact['adv_name'], cmds[1]]
+                await process_cmds(mc, args)
+
+            # same but with no parameter
+            elif line.startswith("sc ") or line.startswith("share_contact ") or\
+                    line.startswith("ec ") or line.startswith("export_contact ") or\
+                    line.startswith("rp ") or line.startswith("reset_path ") or\
+                    line.startswith("remove_contact ") :
+                cmd = line.split(" ")
+                args = [cmd, contact['adv_name']]
+                await process_cmds(mc, args)
+
+            # special treatment for login (wait for login to complete)
+            elif line.startswith("login ") :
+                cmds = line.split(" ", 1)
+                args = [cmds[0], contact['adv_name'], cmds[1]]
+                await process_cmds(mc, args)
+                await process_cmds(mc, ["wl"])
+
+            # same for request status
+            elif line == "rs" or line == "request_status" :
+                args = ["rs", contact['adv_name']]
+                await process_cmds(mc, args)
+                await process_cmds(mc, ["ws"])
+
+            elif line.startswith(":") : # : will send a command to current recipient
+                args=["cmd", contact['adv_name'], line[1:]]
+                await process_cmds(mc, args)
+
+            elif line.startswith("@") : # send a cli command that won't need quotes !
+                args=["cmd", line[1:]]
                 await process_cmds(mc, args)
 
             elif line.startswith("to ") : # dest
@@ -128,7 +168,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 for c in it :
                     print(f", {c[1]['adv_name']}", end="")
                 print("")
-                
+
             else :
                 if line.startswith("send") :
                     line = line[5:]
@@ -609,9 +649,9 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.ERROR:
                     print(f"Error exporting contact: {res}")
                 elif json_output :
-                    print(json.dumps(res.payload, indent=4))
+                    print(json.dumps(res.payload))
                 else :
-                    print(res.payload)
+                    print(res.payload['uri'])
 
         case "card" :
             res = await mc.commands.export_contact()
@@ -619,9 +659,9 @@ async def next_cmd(mc, cmds, json_output=False):
             if res.type == EventType.ERROR:
                 print(f"Error exporting contact: {res}")
             elif json_output :
-                print(json.dumps(res.payload, indent=4))
+                print(json.dumps(res.payload))
             else :
-                print(res.payload)
+                print(res.payload['uri'])
 
         case "remove_contact" :
             argnum = 1
@@ -842,6 +882,7 @@ def command_help():
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l  [[ 
     wait_login             : wait for login (timeouts after 5sec)   wl ]]
+    logout <name>          : log out of a repeater
     cmd <name> <cmd>       : sends a command to a repeater (no ack) c  [
     wmt8                   : wait for a msg (reply) with a timeout     ]
     req_status <name>      : requests status from a node            rs
