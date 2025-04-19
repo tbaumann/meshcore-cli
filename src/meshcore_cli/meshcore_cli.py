@@ -33,6 +33,8 @@ CS = None
 
 # Ansi colors
 ANSI_END = "\033[0m"
+ANSI_INVERT = "\033[7m"
+ANSI_NORMAL = "\033[27m"
 ANSI_GREEN = "\033[0;32m"
 ANSI_BGREEN = "\033[1;32m"
 ANSI_BLUE = "\033[0;34m"
@@ -257,17 +259,17 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
         last_ack = True
         while True:
-            prompt = ""
+            prompt = f"{ANSI_INVERT}"
             if not last_ack:
                 prompt = prompt + f"{ANSI_RED}!"
 
             if contact["type"] == 3 : # room server
-                prompt = prompt + f"{ANSI_CYAN}"
+                prompt = prompt + f"{ANSI_BCYAN}"
             elif contact["type"] == 2 :
-                prompt = prompt + f"{ANSI_MAGENTA}"
+                prompt = prompt + f"{ANSI_BMAGENTA}"
             else :
-                prompt = prompt + f"{ANSI_BLUE}"
-            prompt = prompt + f"{contact['adv_name']}>{ANSI_END} "
+                prompt = prompt + f"{ANSI_BBLUE}"
+            prompt = prompt + f"{ANSI_INVERT}{contact['adv_name']} {ANSI_NORMAL}{ANSI_END} "
 
             if not process_event_message.color :
                 prompt=escape_ansi(prompt)
