@@ -100,6 +100,9 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             disp = disp + f"{ANSI_YELLOW}({path_str}){ANSI_END}: "
             disp = disp + f"{data['text']}"
 
+            if not process_event_message.color:
+                disp = escape_ansi(disp)
+
             if above:
                 print_above(disp)
             else:
@@ -108,6 +111,10 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
         elif (data['type'] == "CHAN") :
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
             disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}: {data['text']}"
+
+            if not process_event_message.color:
+                disp = escape_ansi(disp)
+
             if above:
                 print_above(disp)
             else:
@@ -116,6 +123,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             print(json.dumps(ev.payload))
     return True
 process_event_message.print_snr=False
+process_event_message.color=True
 
 async def handle_message(event):
     """ Process incoming message events """
@@ -145,9 +153,10 @@ def make_completion_dict(contacts):
         "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, 
                  "name" : None, "lat" : None, "lon" : None, "coords" : None, 
                  "print_snr" : {"on":None, "off": None},
-                 "json_msgs" : {"on":None, "off": None}},
+                 "json_msgs" : {"on":None, "off": None},
+                 "color" : {"on":None, "off":None}},
         "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
-                 "tx" : None, "print_snr" : None, "json_msgs":None},
+                 "tx" : None, "print_snr" : None, "json_msgs":None, "color":None},
         "reboot" : None,
         "card" : None,
         "login" : None,
@@ -224,6 +233,10 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             if not last_ack:
                 prompt = prompt + f"{ANSI_RED}!"
             prompt = prompt + f"{ANSI_BLUE}{contact['adv_name']}>{ANSI_END} "
+
+            if not process_event_message.color :
+                prompt=escape_ansi(prompt)
+
             line = await session.prompt_async(ANSI(prompt), complete_while_typing=False)
 
             if line == "" : # blank line
@@ -246,6 +259,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("floodadv") or\
                     line.startswith("chan") or\
                     line.startswith("card") or \
+                    line.startswith("lc") or \
                     line == "infos" or line == "i" :
                 args = shlex.split(line)
                 await process_cmds(mc, args)
@@ -317,8 +331,12 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
             elif line == "list" : # list command from chat displays contacts on a line
                 it = iter(mc.contacts.items())
+                first = True
                 for c in it :
-                    print(f", {c[1]['adv_name']}", end="")
+                    if not first:
+                        print(", ", end="")
+                    first = False
+                    print(f"{c[1]['adv_name']}", end="")
                 print("")
 
             else :
@@ -444,6 +462,8 @@ async def next_cmd(mc, cmds, json_output=False):
     lon <lon>               : longitude
     coords <lat,lon>        : coordinates
     print_snr <on/off>      : toggle snr display in messages""")
+                    case "color" :
+                        process_event_message.color = (cmds[2] == "on")
                     case "print_snr" :
                         process_event_message.print_snr = (cmds[2] == "on")
                     case "json_msgs" :
@@ -547,6 +567,11 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"json_msgs" : handle_message.json_output}))
                         else:
                             print(f"{'on' if handle_message.json_output else 'off'}")
+                    case "color":
+                        if json_output :
+                            print(json.dumps({"color" : process_event_message.color}))
+                        else:
+                            print(f"{'on' if process_event_message.color else 'off'}")
                     case "print_snr":
                         if json_output :
                             print(json.dumps({"print_snr" : process_event_message.print_snr}))
@@ -1070,6 +1095,7 @@ async def main(argv):
                 port = int(arg)
             case "-j" :
                 json_output=True
+                handle_message.json_output=True
             case "-D" :
                 debug=True
             case "-h" :
