@@ -74,6 +74,13 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
     else :
         await mc.ensure_contacts()
         data = ev.payload
+        if data['path_len'] == 255 :
+            path_str = "D"
+        else :
+            path_str = f"{data['path_len']}" 
+        if "SNR" in data and process_event_message.print_snr:
+            path_str = path_str + f",{data['SNR']}dB"
+
         if (data['type'] == "PRIV") :
             ct = mc.get_contact_by_key_prefix(data['pubkey_prefix'])
             if ct is None:
@@ -81,10 +88,6 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 name = data["pubkey_prefix"]
             else:
                 name = ct["adv_name"]
-            if data['path_len'] == 255 :
-                path_str = "D"
-            else :
-                path_str = str(data['path_len'])
 
             disp = f"{ANSI_GREEN}{name}"
             if 'signature' in data:
@@ -98,11 +101,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             else:
                 print(disp)
         elif (data['type'] == "CHAN") :
-            if data['path_len'] == 255 :
-                path_str = "D"
-            else :
-                path_str = f"{ANSI_YELLOW}({data['path_len']}){ANSI_END}"
-
+            path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
             if above:
                 print_above(f"{ANSI_GREEN}ch{data['channel_idx']}({path_str}): {data['text']}")
             else:
@@ -110,6 +109,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
         else:
             print(json.dumps(ev.payload))
     return True
+process_event_message.print_snr=False
 
 async def handle_message(event):
     """ Process incoming message events """
@@ -136,8 +136,11 @@ def make_completion_dict(contacts):
         "infos" : None,
         "advert" : None,
         "floodadv" : None,
-        "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, "name" : None, "lat" : None, "lon" : None, "coords" : None},
-        "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, "tx" : None},
+        "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, 
+                 "name" : None, "lat" : None, "lon" : None, "coords" : None, 
+                 "print_snr" : {"on":None, "off": None}},
+        "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
+                 "tx" : None, "print_snr" : None},
         "reboot" : None,
         "card" : None,
         "login" : None,
@@ -433,7 +436,13 @@ async def next_cmd(mc, cmds, json_output=False):
     name <name>             : node name
     lat <lat>               : latitude
     lon <lon>               : longitude
-    coords <lat,lon>        : coordinates""")
+    coords <lat,lon>        : coordinates
+    print_snr <on/off>      : toggle snr display in messages""")
+                    case "print_snr" :
+                        if cmds[2] == "on" :
+                            process_event_message.print_snr = True
+                        else:
+                            process_event_message.print_snr = False
                     case "pin":
                         res = await mc.commands.set_devicepin(cmds[2])
                         logger.debug(res)
@@ -522,11 +531,17 @@ async def next_cmd(mc, cmds, json_output=False):
                 match cmds[1]:
                     case "help":
                         print("""Gets parameters from node
-    name   : node name
-    bat    : battery level in mV
-    coords : adv coordinates
-    radio  : radio parameters
-    tx     : tx power""")
+    name      : node name
+    bat       : battery level in mV
+    coords    : adv coordinates
+    radio     : radio parameters
+    tx        : tx power
+    print_snr : snr display in messages""")
+                    case "print_snr":
+                        if json_output :
+                            print(json.dumps({"print_snr" : process_event_message.print_snr}))
+                        else:
+                            print(f"{"on" if process_event_message.print_snr else "off"}")
                     case "name":
                         if json_output :
                             print(json.dumps(mc.self_info["name"]))
