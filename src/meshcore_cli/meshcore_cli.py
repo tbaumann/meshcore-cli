@@ -274,7 +274,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, ["wl"])
 
             # same for request status
-            elif line == "rs" or line == "request_status" :
+            elif line == "rs" or line == "req_status" :
                 args = ["rs", contact['adv_name']]
                 await process_cmds(mc, args)
                 await process_cmds(mc, ["ws"])
