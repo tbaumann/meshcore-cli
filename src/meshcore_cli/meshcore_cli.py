@@ -13,6 +13,7 @@ from prompt_toolkit.shortcuts import CompleteStyle
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.key_binding import KeyBindings
 
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
@@ -227,6 +228,13 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                                 mouse_support=True,
                                 complete_style=CompleteStyle.MULTI_COLUMN)
 
+        bindings = KeyBindings()
+
+        # Add our own key binding.
+        @bindings.add("escape")
+        def _(event):
+            event.app.current_buffer.cancel_completion()
+
         last_ack = True
         while True:
             prompt = ""
@@ -237,7 +245,11 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             if not process_event_message.color :
                 prompt=escape_ansi(prompt)
 
-            line = await session.prompt_async(ANSI(prompt), complete_while_typing=False)
+            session.app.ttimeoutlen = 0.2
+            session.app.timeoutlen = 0.2
+
+            line = await session.prompt_async(ANSI(prompt), complete_while_typing=False,
+                                              key_bindings=bindings)
 
             if line == "" : # blank line
                 pass
