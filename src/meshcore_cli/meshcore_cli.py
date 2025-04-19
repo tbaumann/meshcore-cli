@@ -41,6 +41,7 @@ ANSI_BLUE = "\033[0;34m"
 ANSI_BBLUE = "\033[1;34m"
 ANSI_YELLOW = "\033[0;33m"
 ANSI_RED = "\033[0;31m"
+ANSI_BRED = "\033[1;31m"
 ANSI_MAGENTA = "\033[0;35m"
 ANSI_BMAGENTA = "\033[1;35m"
 ANSI_CYAN = "\033[0;36m"
@@ -105,15 +106,15 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 name = ct["adv_name"]
 
             if ct["type"] == 3 : # room
-                disp = f"{ANSI_BCYAN}"
+                disp = f"{ANSI_CYAN}"
             elif ct["type"] == 2 : # repeater
-                disp = f"{ANSI_BMAGENTA}"
+                disp = f"{ANSI_MAGENTA}"
             else:
-                disp = f"{ANSI_BBLUE}"
+                disp = f"{ANSI_BLUE}"
             disp = disp + f"{name}"
             if 'signature' in data:
                 sender = mc.get_contact_by_key_prefix(data['signature'])
-                disp = disp + f"/{ANSI_BBLUE}{sender['adv_name']}"
+                disp = disp + f"/{ANSI_BLUE}{sender['adv_name']}"
             disp = disp + f" {ANSI_YELLOW}({path_str})"
             if data["txt_type"] == 1:
                 disp = disp + f"{ANSI_LIGHT_GRAY}"
@@ -131,7 +132,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
 
         elif (data['type'] == "CHAN") :
             path_str = f" {ANSI_YELLOW}({path_str}){ANSI_END}"
-            disp = f"{ANSI_BGREEN}ch{data['channel_idx']}{path_str}"
+            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}"
             disp = disp + f"{ANSI_END}"
             disp = disp + f": {data['text']}"
 
@@ -177,9 +178,11 @@ def make_completion_dict(contacts):
                  "name" : None, "lat" : None, "lon" : None, "coords" : None, 
                  "print_snr" : {"on":None, "off": None},
                  "json_msgs" : {"on":None, "off": None},
-                 "color" : {"on":None, "off":None}},
+                 "color" : {"on":None, "off":None},
+                 "classic_prompt" : {"on" : None, "off":None}},
         "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
-                 "tx" : None, "print_snr" : None, "json_msgs":None, "color":None},
+                 "tx" : None, "print_snr" : None, "json_msgs":None, "color":None,
+                 "classic_prompt":None},
         "reboot" : None,
         "card" : None,
         "login" : None,
@@ -259,19 +262,35 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
         last_ack = True
         while True:
-            prompt = f"{ANSI_INVERT}"
-            if not last_ack:
-                prompt = prompt + f"{ANSI_RED}!"
+            color = process_event_message.color
+            classic = interactive_loop.classic or not color
 
-            if contact["type"] == 3 : # room server
+            if classic:
+                prompt = ""
+            else:            
+                prompt = f"{ANSI_INVERT}"
+            if not last_ack:
+                prompt = prompt + f"{ANSI_BRED}"
+                if classic :
+                    prompt = prompt + "!"
+            elif contact["type"] == 3 : # room server
                 prompt = prompt + f"{ANSI_BCYAN}"
             elif contact["type"] == 2 :
                 prompt = prompt + f"{ANSI_BMAGENTA}"
             else :
                 prompt = prompt + f"{ANSI_BBLUE}"
-            prompt = prompt + f"{ANSI_INVERT}{contact['adv_name']} {ANSI_NORMAL}{ANSI_END} "
+            # some possible symbols 🭬🬛🬗🭬🬛🬃🬗🭬🬛🬃🬗🬏🭀🭋🭨🮋
+            if not classic:
+                prompt = prompt + f"{ANSI_INVERT}"
+            prompt = prompt + f"{contact['adv_name']}"
+            if classic :
+                prompt = prompt + f"{ANSI_NORMAL}> "
+            else:
+                prompt = prompt + f" {ANSI_NORMAL}🭬"
 
-            if not process_event_message.color :
+            prompt = prompt + f"{ANSI_END}"
+
+            if not color :
                 prompt=escape_ansi(prompt)
 
             session.app.ttimeoutlen = 0.2
@@ -348,6 +367,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             elif line.startswith("to ") : # dest
+                last_ack = True
                 dest = line[3:]
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
@@ -403,6 +423,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     except asyncio.CancelledError:
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
         print("Exiting cli")
+interactive_loop.classic = False
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
@@ -503,6 +524,8 @@ async def next_cmd(mc, cmds, json_output=False):
     lon <lon>               : longitude
     coords <lat,lon>        : coordinates
     print_snr <on/off>      : toggle snr display in messages""")
+                    case "classic_prompt":
+                        interactive_loop.classic = (cmds[2] == "on")
                     case "color" :
                         process_event_message.color = (cmds[2] == "on")
                     case "print_snr" :
@@ -603,6 +626,11 @@ async def next_cmd(mc, cmds, json_output=False):
     radio     : radio parameters
     tx        : tx power
     print_snr : snr display in messages""")
+                    case "classic_prompt":
+                        if json_output :
+                            print(json.dumps({"classic_prompt" : interactive_loop.classic}))
+                        else:
+                            print(f"{'on' if interactive_loop.classic else 'off'}")
                     case "json_msgs":
                         if json_output :
                             print(json.dumps({"json_msgs" : handle_message.json_output}))
