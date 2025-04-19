@@ -102,10 +102,11 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 print(disp)
         elif (data['type'] == "CHAN") :
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
+            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}: {data['text']}"
             if above:
-                print_above(f"{ANSI_GREEN}ch{data['channel_idx']}({path_str}): {data['text']}")
+                print_above(disp)
             else:
-                print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
+                print(disp)
         else:
             print(json.dumps(ev.payload))
     return True
