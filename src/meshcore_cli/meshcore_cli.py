@@ -541,7 +541,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         if json_output :
                             print(json.dumps({"print_snr" : process_event_message.print_snr}))
                         else:
-                            print(f"{"on" if process_event_message.print_snr else "off"}")
+                            print(f"{'on' if process_event_message.print_snr else 'off'}")
                     case "name":
                         if json_output :
                             print(json.dumps(mc.self_info["name"]))
