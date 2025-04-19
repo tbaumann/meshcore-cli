@@ -35,10 +35,14 @@ CS = None
 ANSI_END = "\033[0m"
 ANSI_GREEN = "\033[0;32m"
 ANSI_BLUE = "\033[0;34m"
-ANSI_YELLOW = "\033[1;33m"
+ANSI_YELLOW = "\033[0;33m"
 ANSI_RED = "\033[0;31m"
-ANSI_LIGHT_BLUE = "\033[1;34m"
-ANSI_LIGHT_GREEN = "\033[1;32m"
+ANSI_MAGENTA = "\033[0;35m"
+ANSI_CYAN = "\033[0;36m"
+ANSI_LIGHT_BLUE = "\033[0;94m"
+ANSI_LIGHT_GREEN = "\033[0;92m"
+ANSI_LIGHT_YELLOW = "\033[0;93m"
+ANSI_LIGHT_GRAY="\033[0;90m"
 
 def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
@@ -94,12 +98,22 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             else:
                 name = ct["adv_name"]
 
-            disp = f"{ANSI_GREEN}{name}"
+            if ct["type"] == 3 : # room
+                disp = f"{ANSI_CYAN}"
+            elif ct["type"] == 2 : # repeater
+                disp = f"{ANSI_MAGENTA}"
+            else:
+                disp = f"{ANSI_GREEN}"
+            disp = disp + f"{name}"
             if 'signature' in data:
                 sender = mc.get_contact_by_key_prefix(data['signature'])
-                disp = disp + f"/{sender['adv_name']}"
-            disp = disp + f"{ANSI_YELLOW}({path_str}){ANSI_END}: "
-            disp = disp + f"{data['text']}"
+                disp = disp + f"/{ANSI_GREEN}{sender['adv_name']}"
+            disp = disp + f" {ANSI_YELLOW}({path_str})"
+            if data["txt_type"] == 1:
+                disp = disp + f"{ANSI_LIGHT_GRAY}"
+            else:
+                disp = disp + f"{ANSI_END}"
+            disp = disp + f": {data['text']}"
 
             if not process_event_message.color:
                 disp = escape_ansi(disp)
@@ -110,8 +124,10 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 print(disp)
 
         elif (data['type'] == "CHAN") :
-            path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
-            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}: {data['text']}"
+            path_str = f" {ANSI_YELLOW}({path_str}){ANSI_END}"
+            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}"
+            disp = disp + f"{ANSI_END}"
+            disp = disp + f": {data['text']}"
 
             if not process_event_message.color:
                 disp = escape_ansi(disp)
