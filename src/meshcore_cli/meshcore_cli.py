@@ -5,7 +5,7 @@
 import asyncio
 import os, sys
 import time, datetime
-import getopt, json, shlex
+import getopt, json, shlex, re
 import logging
 from pathlib import Path
 from prompt_toolkit.shortcuts import PromptSession
@@ -39,10 +39,15 @@ ANSI_RED = "\033[0;31m"
 ANSI_LIGHT_BLUE = "\033[1;34m"
 ANSI_LIGHT_GREEN = "\033[1;32m"
 
+def escape_ansi(line):
+    ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    return ansi_escape.sub('', line)
+
 def print_above(str):
     """ prints a string above current line """
     width = os.get_terminal_size().columns
-    lines = divmod(len(str), width)[0] + 1
+    stringlen = len(escape_ansi(str))-1
+    lines = divmod(stringlen, width)[0] + 1
     print("\u001B[s", end="")                   # Save current cursor position
     print("\u001B[A", end="")                   # Move cursor up one line
     print("\u001B[999D", end="")                # Move cursor to beginning of line
@@ -173,6 +178,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\", \"q\", CTRL+D will end interactive mode""")
 
     await mc.ensure_contacts()
+    handle_message.json_output = False
+    handle_message.above = True
     await subscribe_to_msgs(mc)
     if to is None:
         contact = next(iter(mc.contacts.items()))[1]
