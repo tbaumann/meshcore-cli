@@ -247,10 +247,11 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         else:
             our_history = None
 
+        # beware, mouse support breaks mouse scroll ...
         session = PromptSession(completer=completer, 
                                 history=our_history, 
                                 wrap_lines=False, 
-                                mouse_support=True,
+                                mouse_support=False,
                                 complete_style=CompleteStyle.MULTI_COLUMN)
 
         bindings = KeyBindings()
