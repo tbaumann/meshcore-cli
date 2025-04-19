@@ -81,7 +81,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             else :
                 path_str = str(data['path_len'])
 
-            disp = f" {ANSI_GREEN}{name}"
+            disp = f"{ANSI_GREEN}{name}"
             if 'signature' in data:
                 sender = mc.get_contact_by_key_prefix(data['signature'])
                 disp = disp + f"/{sender['adv_name']}"
@@ -99,7 +99,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 path_str = f"{ANSI_YELLOW}({data['path_len']}){ANSI_END}"
 
             if above:
-                print_above(f" {ANSI_GREEN}ch{data['channel_idx']}({path_str}): {data['text']}")
+                print_above(f"{ANSI_GREEN}ch{data['channel_idx']}({path_str}): {data['text']}")
             else:
                 print(f"ch{data['channel_idx']}({path_str}): {data['text']}")
         else:
@@ -108,7 +108,12 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
 
 async def handle_message(event):
     """ Process incoming message events """
-    await process_event_message(MC, event, False, above=True)
+    await process_event_message(handle_message.mc, event,  
+                                above=handle_message.above, json_output=handle_message.json_output)
+handle_message.json_output=False
+handle_message.mc=None
+handle_message.above=True
+
 
 def make_completion_dict(contacts):
     contact_list = {}    
@@ -935,7 +940,7 @@ async def process_cmds (mc, args, json_output=False) :
     while cmds and len(cmds) > 0 :
         if not first and json_output :
             print(",")
-        cmds = await next_cmd(MC, cmds, json_output)
+        cmds = await next_cmd(mc, cmds, json_output)
         first = False
     if json_output :
         print("]")
@@ -1003,7 +1008,6 @@ def usage () :
 
 async def main(argv):   
     """ Do the job """  
-    global MC
     json_output = JSON
     debug = False
     address = ADDRESS
@@ -1065,10 +1069,11 @@ async def main(argv):
             with open(MCCLI_ADDRESS, "w", encoding="utf-8") as f :
                 f.write(address)
 
-    MC = MeshCore(con, debug=debug)
-    await MC.connect()
+    mc = MeshCore(con, debug=debug)
+    await mc.connect()
+    handle_message.mc = mc # connect meshcore to handle_message
 
-    res = await MC.commands.send_device_query()
+    res = await mc.commands.send_device_query()
     if res.type == EventType.ERROR :
         logger.error(f"Error while querying device: {res}")
         return
@@ -1077,14 +1082,14 @@ async def main(argv):
         logger.setLevel(logging.ERROR)
     else :
         if res.payload["fw ver"] > 2 :
-            logger.info(f"Connected to {MC.self_info['name']} running on a {res.payload['ver']} fw.")
+            logger.info(f"Connected to {mc.self_info['name']} running on a {res.payload['ver']} fw.")
         else :    
-            logger.info(f"Connected to {MC.self_info['name']}.")
+            logger.info(f"Connected to {mc.self_info['name']}.")
 
     if len(args) == 0 : # no args, run in chat mode
-        await process_cmds(MC, ["chat"], json_output)
+        await process_cmds(mc, ["chat"], json_output)
     else:
-        await process_cmds(MC, args, json_output)
+        await process_cmds(mc, args, json_output)
 
 def cli():
     try:
