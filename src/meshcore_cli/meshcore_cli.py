@@ -70,10 +70,14 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
         logger.error(f"Error retrieving messages: {ev.payload}")
         return False
     elif json_output :
-        print(json.dumps(ev.payload, indent=4), end=end, flush=True)
+        if print_above :
+            print_above(json.dumps(ev.payload))
+        else:
+            print(json.dumps(ev.payload), end=end, flush=True)
     else :
         await mc.ensure_contacts()
         data = ev.payload
+
         if data['path_len'] == 255 :
             path_str = "D"
         else :
@@ -100,6 +104,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 print_above(disp)
             else:
                 print(disp)
+
         elif (data['type'] == "CHAN") :
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
             disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}: {data['text']}"
@@ -139,9 +144,10 @@ def make_completion_dict(contacts):
         "floodadv" : None,
         "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, 
                  "name" : None, "lat" : None, "lon" : None, "coords" : None, 
-                 "print_snr" : {"on":None, "off": None}},
+                 "print_snr" : {"on":None, "off": None},
+                 "json_msgs" : {"on":None, "off": None}},
         "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
-                 "tx" : None, "print_snr" : None},
+                 "tx" : None, "print_snr" : None, "json_msgs":None},
         "reboot" : None,
         "card" : None,
         "login" : None,
@@ -182,7 +188,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\", \"q\", CTRL+D will end interactive mode""")
 
     await mc.ensure_contacts()
-    handle_message.json_output = False
     handle_message.above = True
     await subscribe_to_msgs(mc)
     if to is None:
@@ -440,10 +445,9 @@ async def next_cmd(mc, cmds, json_output=False):
     coords <lat,lon>        : coordinates
     print_snr <on/off>      : toggle snr display in messages""")
                     case "print_snr" :
-                        if cmds[2] == "on" :
-                            process_event_message.print_snr = True
-                        else:
-                            process_event_message.print_snr = False
+                        process_event_message.print_snr = (cmds[2] == "on")
+                    case "json_msgs" :
+                        handle_message.json_output = (cmds[2] == "on")
                     case "pin":
                         res = await mc.commands.set_devicepin(cmds[2])
                         logger.debug(res)
@@ -538,6 +542,11 @@ async def next_cmd(mc, cmds, json_output=False):
     radio     : radio parameters
     tx        : tx power
     print_snr : snr display in messages""")
+                    case "json_msgs":
+                        if json_output :
+                            print(json.dumps({"json_msgs" : handle_message.json_output}))
+                        else:
+                            print(f"{'on' if handle_message.json_output else 'off'}")
                     case "print_snr":
                         if json_output :
                             print(json.dumps({"print_snr" : process_event_message.print_snr}))
