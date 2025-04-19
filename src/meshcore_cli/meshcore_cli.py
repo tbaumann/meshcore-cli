@@ -34,11 +34,15 @@ CS = None
 # Ansi colors
 ANSI_END = "\033[0m"
 ANSI_GREEN = "\033[0;32m"
+ANSI_BGREEN = "\033[1;32m"
 ANSI_BLUE = "\033[0;34m"
+ANSI_BBLUE = "\033[1;34m"
 ANSI_YELLOW = "\033[0;33m"
 ANSI_RED = "\033[0;31m"
 ANSI_MAGENTA = "\033[0;35m"
+ANSI_BMAGENTA = "\033[1;35m"
 ANSI_CYAN = "\033[0;36m"
+ANSI_BCYAN = "\033[1;36m"
 ANSI_LIGHT_BLUE = "\033[0;94m"
 ANSI_LIGHT_GREEN = "\033[0;92m"
 ANSI_LIGHT_YELLOW = "\033[0;93m"
@@ -99,15 +103,15 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 name = ct["adv_name"]
 
             if ct["type"] == 3 : # room
-                disp = f"{ANSI_CYAN}"
+                disp = f"{ANSI_BCYAN}"
             elif ct["type"] == 2 : # repeater
-                disp = f"{ANSI_MAGENTA}"
+                disp = f"{ANSI_BMAGENTA}"
             else:
-                disp = f"{ANSI_GREEN}"
+                disp = f"{ANSI_BBLUE}"
             disp = disp + f"{name}"
             if 'signature' in data:
                 sender = mc.get_contact_by_key_prefix(data['signature'])
-                disp = disp + f"/{ANSI_GREEN}{sender['adv_name']}"
+                disp = disp + f"/{ANSI_BBLUE}{sender['adv_name']}"
             disp = disp + f" {ANSI_YELLOW}({path_str})"
             if data["txt_type"] == 1:
                 disp = disp + f"{ANSI_LIGHT_GRAY}"
@@ -125,7 +129,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
 
         elif (data['type'] == "CHAN") :
             path_str = f" {ANSI_YELLOW}({path_str}){ANSI_END}"
-            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}"
+            disp = f"{ANSI_BGREEN}ch{data['channel_idx']}{path_str}"
             disp = disp + f"{ANSI_END}"
             disp = disp + f": {data['text']}"
 
@@ -256,7 +260,14 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             prompt = ""
             if not last_ack:
                 prompt = prompt + f"{ANSI_RED}!"
-            prompt = prompt + f"{ANSI_BLUE}{contact['adv_name']}>{ANSI_END} "
+
+            if contact["type"] == 3 : # room server
+                prompt = prompt + f"{ANSI_CYAN}"
+            elif contact["type"] == 2 :
+                prompt = prompt + f"{ANSI_MAGENTA}"
+            else :
+                prompt = prompt + f"{ANSI_BLUE}"
+            prompt = prompt + f"{contact['adv_name']}>{ANSI_END} "
 
             if not process_event_message.color :
                 prompt=escape_ansi(prompt)
