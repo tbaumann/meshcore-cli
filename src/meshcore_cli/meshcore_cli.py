@@ -22,6 +22,7 @@ from meshcore import MeshCore, EventType, logger
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
 MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
 MCCLI_HISTORY_FILE = MCCLI_CONFIG_DIR + "history"
+MCCLI_INIT_SCRIPT = MCCLI_CONFIG_DIR + "init"
 
 # Fallback address if config file not found
 # if None or "" then a scan is performed
@@ -1064,13 +1065,22 @@ async def process_cmds (mc, args, json_output=False) :
     first = True
     if json_output :
         print("[")
-    while cmds and len(cmds) > 0 :
+    while cmds and len(cmds) > 0 and cmds[0][0] != '#' :
         if not first and json_output :
             print(",")
         cmds = await next_cmd(mc, cmds, json_output)
         first = False
     if json_output :
         print("]")
+
+async def process_script(mc, file, json_output=False):
+    with open(file, "r") as f :
+        lines=f.readlines()
+
+    for line in lines:
+        logger.debug(f"processing {line}")
+        cmds = shlex.split(line[:-1])
+        await process_cmds(mc, cmds, json_output)
 
 def command_help():
     print("""  General commands
@@ -1213,6 +1223,10 @@ async def main(argv):
             logger.info(f"Connected to {mc.self_info['name']} running on a {res.payload['ver']} fw.")
         else :    
             logger.info(f"Connected to {mc.self_info['name']}.")
+
+    if os.path.exists(MCCLI_INIT_SCRIPT) :
+        logger.debug(f"Executing init script : {MCCLI_INIT_SCRIPT}")
+        await process_script(mc, MCCLI_INIT_SCRIPT, json_output)
 
     if len(args) == 0 : # no args, run in chat mode
         await process_cmds(mc, ["chat"], json_output)
