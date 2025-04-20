@@ -578,9 +578,12 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print("ok")
                     case "lat":
-                        res = await mc.commands.set_coords(\
-                                float(cmds[2]),\
-                                mc.self_infos['adv_lon'])
+                        if "adv_lon" in mc.self_info :
+                            lon = mc.self_info['adv_lon']
+                        else:
+                            lon = 0
+                        lat = float(cmds[2])
+                        res = await mc.commands.set_coords(lat, lon)
                         logger.debug(res)
                         if res.type == EventType.ERROR:
                             print(f"Error: {res}")
@@ -589,9 +592,12 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print("ok")
                     case "lon":
-                        res = await mc.commands.set_coords(\
-                                mc.self_infos['adv_lat'],\
-                                float(cmds[2]))
+                        if "adv_lat" in mc.self_info :
+                            lat = mc.self_info['adv_lat']
+                        else:
+                            lat = 0
+                        lon = float(cmds[2])
+                        res = await mc.commands.set_coords(lat, lon)
                         logger.debug(res)
                         if res.type == EventType.ERROR:
                             print(f"Error: {res}")
@@ -600,7 +606,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print("ok")
                     case "coords":
-                        params=cmds[2].commands.split(",")
+                        params=cmds[2].split(",")
                         res = await mc.commands.set_coords(\
                                 float(params[0]),\
                                 float(params[1]))
