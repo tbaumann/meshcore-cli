@@ -7,6 +7,7 @@ import os, sys
 import time, datetime
 import getopt, json, shlex, re
 import logging
+import requests
 from pathlib import Path
 from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.shortcuts import CompleteStyle
@@ -186,6 +187,7 @@ def make_completion_dict(contacts):
                  "classic_prompt":None},
         "reboot" : None,
         "card" : None,
+        "upload_card" : None,
         "login" : None,
         "logout" : None,
         "req_status" : None,
@@ -194,6 +196,7 @@ def make_completion_dict(contacts):
         "contact_info": None,
         "path": None,
         "export_contact" : None,
+        "upload_contact" : None,
         "reset_path" : None,
         "change_path" : None,
         "cli" : None,
@@ -321,6 +324,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("card") or \
                     line.startswith("lc") or \
                     line.startswith("script") or \
+                    line.startswith("upload_card") or \
                     line == "infos" or line == "i" :
                 args = shlex.split(line)
                 await process_cmds(mc, args)
@@ -334,6 +338,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             # commands that take contact as second arg will be sent to recipient
             elif line == "sc" or line == "share_contact" or\
                     line == "ec" or line == "export_contact" or\
+                    line == "uc" or line == "upload_contact" or\
                     line == "rp" or line == "reset_path" or\
                     line == "contact_info" or line == "ci" or\
                     line == "path" or\
@@ -903,6 +908,28 @@ async def next_cmd(mc, cmds, json_output=False):
                     else :
                         print(res.payload['uri'])
 
+            case "upload_contact" | "uc" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.export_contact(contact)
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error exporting contact: {res}")
+                    else :
+                        resp = requests.post("https://map.meshcore.dev/api/v1/nodes",
+                                            json = {"links": [res.payload['uri']]})
+                        if json_output :
+                            print(json.dumps({"response", str(resp)}))
+                        else :
+                            print(resp)
+
             case "card" :
                 res = await mc.commands.export_contact()
                 logger.debug(res)
@@ -912,6 +939,19 @@ async def next_cmd(mc, cmds, json_output=False):
                     print(json.dumps(res.payload))
                 else :
                     print(res.payload['uri'])
+
+            case "upload_card" :
+                res = await mc.commands.export_contact()
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error exporting contact: {res}")
+                else :
+                    resp = requests.post("https://map.meshcore.dev/api/v1/nodes",
+                                         json = {"links": [res.payload['uri']]})
+                    if json_output :
+                        print(json.dumps({"response", str(resp)}))
+                    else :
+                        print(resp)
 
             case "remove_contact" :
                 argnum = 1
