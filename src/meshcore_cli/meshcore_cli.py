@@ -153,11 +153,11 @@ process_event_message.color=True
 async def handle_message(event):
     """ Process incoming message events """
     await process_event_message(handle_message.mc, event,  
-                                above=handle_message.above, json_output=handle_message.json_output)
+                                above=handle_message.above, 
+                                json_output=handle_message.json_output)
 handle_message.json_output=False
 handle_message.mc=None
 handle_message.above=True
-
 
 def make_completion_dict(contacts):
     contact_list = {}    
@@ -191,9 +191,11 @@ def make_completion_dict(contacts):
         "req_status" : None,
         "time" : None,
         "clock" : {"sync" : None},
-        "ec" : None,
-        "rp" : None,
-        "cp" : None,
+        "contact_info": None,
+        "path": None,
+        "export_contact" : None,
+        "reset_path" : None,
+        "change_path" : None,
         "cli" : None,
         "script" : None,
         "$remove_contact" : contact_list,
@@ -333,6 +335,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             elif line == "sc" or line == "share_contact" or\
                     line == "ec" or line == "export_contact" or\
                     line == "rp" or line == "reset_path" or\
+                    line == "contact_info" or line == "ci" or\
+                    line == "path" or\
                     line == "logout" :
                 args = [line, contact['adv_name']]
                 await process_cmds(mc, args)
@@ -794,6 +798,38 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     for c in res.payload.items():
                         print(c[1]["adv_name"])
+
+            case "path":
+                argnum = 1
+                res = await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = contact["out_path"]
+                    if json_output :
+                        print(json.dumps({"adv_name" : contact["adv_name"],
+                                          "out_path" : res}))
+                    else:
+                        if (res == "") :
+                            print("0 hop")
+                        else:
+                            print(res)
+            
+            case "contact_info" | "ci":
+                argnum = 1
+                res = await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    print(json.dumps(contact, indent=4))
 
             case "change_path" | "cp":
                 argnum = 2 
