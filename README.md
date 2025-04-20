@@ -22,6 +22,14 @@ $ meshcli &lt;args&gt; &lt;commands&gt;
 
 If using BLE, don't forget to pair your device first (using `bluetoothctl` for instance on Linux) or meshcli won't be able to communicate.
 
+## Configuration
+
+Configuration files are stored in ```$HOME/.config/meshcore```
+
+If the directory exists, default ble address and history will be stored them.
+
+If there is an initialization script file called ```init```, it will be executed just before the commands provided on command line are executed (and after evaluation of the arguments).
+
 ### Arguments
 
 Arguments mostly deals with ble connection
@@ -45,6 +53,7 @@ Commands are given after arguments, they can be chained and some have shortcuts.
    General commands
     chat                   : enter the chat (interactive) mode
     chat_to &lt;ct&gt;           : enter chat with contact                to
+    script &lt;file&gt;          : executes script stored in file
     infos                  : print informations about the node      i
     card                   : export this node URI                   e
     ver                    : firmware version                       v

@@ -1087,6 +1087,7 @@ def command_help():
     print("""  General commands
     chat                   : enter the chat (interactive) mode
     chat_to <ct>           : enter chat with contact                to
+    script <filename>      : execute commands in filename
     infos                  : print informations about the node      i
     card                   : export this node URI                   e
     ver                    : firmware version                       v
