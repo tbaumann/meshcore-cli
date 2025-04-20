@@ -195,6 +195,7 @@ def make_completion_dict(contacts):
         "rp" : None,
         "cp" : None,
         "cli" : None,
+        "script" : None,
         "$remove_contact" : contact_list,
         "$msg" : contact_list,
         "$cmd" : contact_list,
@@ -237,11 +238,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             if res.type == EventType.NO_MORE_MSGS:
                 break
         
-        completion_dict = {
-            "to": None, 
-            "send": None,
-        }
-
         completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
         if os.path.isdir(MCCLI_CONFIG_DIR) :
             our_history = FileHistory(MCCLI_HISTORY_FILE)
@@ -322,6 +318,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("chan") or\
                     line.startswith("card") or \
                     line.startswith("lc") or \
+                    line.startswith("script") or \
                     line == "infos" or line == "i" :
                 args = shlex.split(line)
                 await process_cmds(mc, args)
@@ -1021,6 +1018,10 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 await interactive_loop(mc, to=contact)
+
+            case "script" :
+                argnum = 1
+                await process_script(mc, cmds[1], json_output=json_output)
 
             case "cli" | "@" :
                 argnum = 1
