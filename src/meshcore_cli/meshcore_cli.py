@@ -661,21 +661,25 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print(f"{'on' if process_event_message.print_snr else 'off'}")
                     case "name":
+                        await mc.commands.send_appstart()
                         if json_output :
                             print(json.dumps(mc.self_info["name"]))
                         else:
                             print(mc.self_info["name"])
                     case "tx":
+                        await mc.commands.send_appstart()
                         if json_output :
                             print(json.dumps(mc.self_info["tx_power"]))
                         else:
                             print(mc.self_info["tx_power"])
                     case "coords":
+                        await mc.commands.send_appstart()
                         if json_output :
                             print(json.dumps({"lat": mc.self_info["adv_lat"], "lon":mc.self_info["adv_lon"]}))
                         else:
                             print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}")
                     case "radio":
+                        await mc.commands.send_appstart()
                         if json_output :
                             print(json.dumps(
                             {"radio_freq": mc.self_info["radio_freq"],
@@ -1001,6 +1005,7 @@ async def next_cmd(mc, cmds, json_output=False):
                     print("]")
 
             case "infos" | "i" :
+                await mc.commands.send_appstart()
                 print(json.dumps(mc.self_info,indent=4))
 
             case "advert" | "a":
