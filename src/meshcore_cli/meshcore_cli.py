@@ -116,7 +116,10 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             disp = disp + f"{name}"
             if 'signature' in data:
                 sender = mc.get_contact_by_key_prefix(data['signature'])
-                disp = disp + f"/{ANSI_BLUE}{sender['adv_name']}"
+                if sender is None:
+                    disp = disp + f"/{ANSI_RED}{data['signature']}"
+                else:
+                    disp = disp + f"/{ANSI_BLUE}{sender['adv_name']}"
             disp = disp + f" {ANSI_YELLOW}({path_str})"
             if data["txt_type"] == 1:
                 disp = disp + f"{ANSI_LIGHT_GRAY}"
