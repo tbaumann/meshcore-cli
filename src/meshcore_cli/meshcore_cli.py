@@ -8,6 +8,7 @@ import time, datetime
 import getopt, json, shlex, re
 import logging
 import requests
+from bleak import BleakScanner
 from pathlib import Path
 from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.shortcuts import CompleteStyle
@@ -15,6 +16,7 @@ from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.shortcuts import radiolist_dialog
 
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
@@ -1265,6 +1267,8 @@ def usage () :
  Arguments :
     -h : prints this help
     -j : json output
+    -D : debug
+    -S : performs a ble scan and ask for device
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
     -t <hostname>   : connects via tcp/ip
@@ -1290,7 +1294,7 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDh")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhS")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -1313,6 +1317,27 @@ async def main(argv):
             case "-h" :
                 usage()
                 return
+            case "-S" :
+                devices = await BleakScanner.discover()
+                choices = []           
+                for d in devices:      
+                    if d.name.startswith("MeshCore-"):
+                        choices.append((d.address, f"{d.address}  {d.name}"))
+                if len(choices) == 0:
+                    logger.error("No BLE device found, exiting")
+                    return
+                                       
+                result = await radiolist_dialog(
+                    title="MeshCore-cli BLE device selector",                                                                              
+                    text="Chose the device to connect to :",
+                    values=choices     
+                ).run_async()          
+
+                if result is None:
+                    logger.info("No choice made, exiting")
+                    return
+
+                address = result
 
     if (debug==True):
         logger.setLevel(logging.DEBUG)
