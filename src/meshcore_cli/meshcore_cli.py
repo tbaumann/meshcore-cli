@@ -686,11 +686,11 @@ async def next_cmd(mc, cmds, json_output=False):
                         if json_output :
                             print(json.dumps(
                             {"radio_freq": mc.self_info["radio_freq"],
-                                "radio_sf":   mc.self_info["radio_sf"],
                                 "radio_bw":   mc.self_info["radio_bw"],
+                                "radio_sf":   mc.self_info["radio_sf"],
                                 "radio_cr":   mc.self_info["radio_cr"]}))
                         else:
-                            print(f"{mc.self_info['radio_freq']},{mc.self_info['radio_sf']},{mc.self_info['radio_bw']},{mc.self_info['radio_cr']}")
+                            print(f"{mc.self_info['radio_freq']},{mc.self_info['radio_bw']},{mc.self_info['radio_sf']},{mc.self_info['radio_cr']}")
                     case "bat" :
                         res = await mc.commands.get_bat()
                         logger.debug(res)
