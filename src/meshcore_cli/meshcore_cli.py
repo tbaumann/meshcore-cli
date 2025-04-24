@@ -1270,6 +1270,7 @@ def usage () :
     -D : debug
     -S : performs a ble scan and ask for device
     -l : list available ble devices and exit
+    -T <timeout>    : timeout for the ble scan (-S and -l) default 2s
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
     -t <hostname>   : connects via tcp/ip
@@ -1289,13 +1290,14 @@ async def main(argv):
     hostname = None
     serial_port = None
     baudrate = 115200
+    timeout = 2
     # If there is an address in config file, use it by default
     # unless an arg is explicitely given
     if os.path.exists(MCCLI_ADDRESS) :
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhSl")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhSlT:")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -1318,8 +1320,10 @@ async def main(argv):
             case "-h" :
                 usage()
                 return
+            case "-T" :
+                timeout = float(arg)
             case "-l" :
-                devices = await BleakScanner.discover()
+                devices = await BleakScanner.discover(timeout=timeout)
                 if len(devices) == 0:
                     logger.error("No ble device found")
                 for d in devices :
@@ -1327,7 +1331,7 @@ async def main(argv):
                         print(f"{d.address}  {d.name}") 
                 return
             case "-S" :
-                devices = await BleakScanner.discover()
+                devices = await BleakScanner.discover(timeout=timeout)
                 choices = []           
                 for d in devices:      
                     if d.name.startswith("MeshCore-"):
