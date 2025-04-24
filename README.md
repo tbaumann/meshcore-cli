@@ -37,6 +37,9 @@ Arguments mostly deals with ble connection
 <pre>
     -h : prints this help                                                                      
     -j : json output
+    -D : print debug messages
+    -S : BLE device selector
+    -l : lists BLE devices
     -a &lt;address&gt;    : specifies device address (can be a name)
     -d &lt;name&gt;       : filter meshcore devices with name or address
     -t &lt;hostname&gt;   : connects via tcp/ip
@@ -70,8 +73,8 @@ Commands are given after arguments, they can be chained and some have shortcuts.
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
-    get &lt;param&gt;            : gets a param, \"get help\" for more
-    set &lt;param&gt; &lt;value&gt;    : sets a param, \"set help\" for more 
+    get &lt;param&gt;            : gets a param, "get help" for more
+    set &lt;param&gt; &lt;value&gt;    : sets a param, "set help" for more 
     time &lt;epoch&gt;           : sets time to given epoch
     clock                  : get current time
     clock sync             : sync device clock                      st

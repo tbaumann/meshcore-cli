@@ -1269,6 +1269,7 @@ def usage () :
     -j : json output
     -D : debug
     -S : performs a ble scan and ask for device
+    -l : list available ble devices and exit
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
     -t <hostname>   : connects via tcp/ip
@@ -1294,7 +1295,7 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhS")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhSl")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
@@ -1316,6 +1317,14 @@ async def main(argv):
                 debug=True
             case "-h" :
                 usage()
+                return
+            case "-l" :
+                devices = await BleakScanner.discover()
+                if len(devices) == 0:
+                    logger.error("No ble device found")
+                for d in devices :
+                    if d.name.startswith("MeshCore-"):
+                        print(f"{d.address}  {d.name}") 
                 return
             case "-S" :
                 devices = await BleakScanner.discover()
