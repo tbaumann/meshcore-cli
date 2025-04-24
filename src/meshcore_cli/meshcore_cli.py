@@ -102,12 +102,14 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
         if (data['type'] == "PRIV") :
             ct = mc.get_contact_by_key_prefix(data['pubkey_prefix'])
             if ct is None:
-                logger.info(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
+                logger.debug(f"Unknown contact with pubkey prefix: {data['pubkey_prefix']}")
                 name = data["pubkey_prefix"]
             else:
                 name = ct["adv_name"]
 
-            if ct["type"] == 3 : # room
+            if ct is None: # Unknown
+                disp = f"{ANSI_RED}"
+            elif ct["type"] == 3 : # room
                 disp = f"{ANSI_CYAN}"
             elif ct["type"] == 2 : # repeater
                 disp = f"{ANSI_MAGENTA}"
@@ -136,8 +138,11 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 print(disp)
 
         elif (data['type'] == "CHAN") :
-            path_str = f" {ANSI_YELLOW}({path_str}){ANSI_END}"
-            disp = f"{ANSI_GREEN}ch{data['channel_idx']}{path_str}"
+            path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
+            if data["channel_idx"] == 0: #public
+                disp = f"{ANSI_GREEN}public {path_str}"
+            else :
+                disp = f"{ANSI_GREEN}ch{data['channel_idx']} {path_str}"
             disp = disp + f"{ANSI_END}"
             disp = disp + f": {data['text']}"
 
@@ -171,6 +176,8 @@ def make_completion_dict(contacts):
 
     completion_list = {
         "to" : contact_list,
+        "to_ch" : None,
+        "to_public" : None,
         "send" : None,
         "cmd" : None,
         "public" : None,
@@ -235,10 +242,12 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     await mc.ensure_contacts()
     handle_message.above = True
     await subscribe_to_msgs(mc)
-    if to is None:
-        contact = next(iter(mc.contacts.items()))[1]
-    else:
+    if not to is None:
         contact = to
+    elif len(mc.contacts.items()) == 0 :
+        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+    else:
+        contact = next(iter(mc.contacts.items()))[1]
 
     try:
         while True: # purge msgs
@@ -283,6 +292,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 prompt = prompt + f"{ANSI_BCYAN}"
             elif contact["type"] == 2 :
                 prompt = prompt + f"{ANSI_BMAGENTA}"
+            elif contact["type"] == 0 : # public channel
+                prompt = prompt + f"{ANSI_BGREEN}"
             else :
                 prompt = prompt + f"{ANSI_BBLUE}"
             # some possible symbols 🭬🬛🬗🭬🬛🬃🬗🭬🬛🬃🬗🬏🭀🭋🭨🮋
@@ -339,19 +350,19 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             # commands that take contact as second arg will be sent to recipient
-            elif line == "sc" or line == "share_contact" or\
+            elif contact["type"] > 0 and (line == "sc" or line == "share_contact" or\
                     line == "ec" or line == "export_contact" or\
                     line == "uc" or line == "upload_contact" or\
                     line == "rp" or line == "reset_path" or\
                     line == "contact_info" or line == "ci" or\
                     line == "path" or\
-                    line == "logout" :
+                    line == "logout" ):
                 args = [line, contact['adv_name']]
                 await process_cmds(mc, args)
 
             # same but for commands with a parameter
-            elif line.startswith("cmd ") or\
-                    line.startswith("cp ") or line.startswith("change_path ") :
+            elif contact["type"] > 0 and (line.startswith("cmd ") or\
+                    line.startswith("cp ") or line.startswith("change_path ")) :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
@@ -382,9 +393,26 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 dest = line[3:]
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
-                    print(f"Contact '{dest}' not found in contacts.")
+                    if dest == "public" :
+                        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                    elif dest.startswith("ch"):
+                        dest = int(dest[2:])
+                        contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+                    else :
+                        print(f"Contact '{dest}' not found in contacts.")
                 else :
                     contact = nc
+
+            elif line.startswith("to_ch") :
+                last_ack = True
+                dest = int(line.split(" ")[1])
+                if dest == 0:
+                    contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                else :
+                    contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+
+            elif line == "to_public" or line == "to_pub" :
+                contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
 
             elif line == "to" :
                 print(contact["adv_name"])
@@ -411,22 +439,21 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     print(f"{c[1]['adv_name']}", end="")
                 print("")
 
-            else :
+            elif line.startswith("send") or line.startswith("\"") :                
                 if line.startswith("send") :
                     line = line[5:]
                 if line.startswith("\"") :
                     line = line[1:]
-                result = await mc.commands.send_msg(contact, line)
-                if result.type == EventType.ERROR:
-                    print(f"⚠️ Failed to send message: {result.payload}")
-                    continue
-                    
-                exp_ack = result.payload["expected_ack"].hex()
-                res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
-                if res is None :
-                    last_ack = False
-                else:
-                    last_ack = True
+                last_ack = await msg_ack(mc, contact, line)
+
+            elif contact["type"] == 0 : # channel, send msg to channel
+                await process_cmds(mc, ["chan", str(contact["chan_nb"]), line]  )
+
+            elif contact["type"] == 1 : # chat, send to recipient and wait ack
+                await msg_ack(mc, contact, line)
+
+            elif contact["type"] == 2 or contact["type"] == 3 : # repeater, send cmd
+                await process_cmds(mc, ["cmd", contact["adv_name"], line])
 
     except (EOFError, KeyboardInterrupt):
         mc.stop()
@@ -435,6 +462,19 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
         print("Exiting cli")
 interactive_loop.classic = False
+
+async def msg_ack (mc, contact, msg) :
+    result = await mc.commands.send_msg(contact, msg)
+    if result.type == EventType.ERROR:
+        print(f"⚠️ Failed to send message: {result.payload}")
+        return False
+
+    exp_ack = result.payload["expected_ack"].hex()
+    res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
+    if res is None :
+        return False
+
+    return True
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
