@@ -597,14 +597,24 @@ async def next_cmd(mc, cmds, json_output=False):
     print_snr <on/off>      : toggle snr display in messages""")
                     case "print_name":
                         interactive_loop.print_name = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "classic_prompt":
                         interactive_loop.classic = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "color" :
                         process_event_message.color = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "print_snr" :
                         process_event_message.print_snr = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "json_msgs" :
                         handle_message.json_output = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "pin":
                         res = await mc.commands.set_devicepin(cmds[2])
                         logger.debug(res)
@@ -1220,16 +1230,12 @@ async def next_cmd(mc, cmds, json_output=False):
 
 async def process_cmds (mc, args, json_output=False) :
     cmds = args
-    first = True
-    if json_output :
-        print("[")
     while cmds and len(cmds) > 0 and cmds[0][0] != '#' :
-        if not first and json_output :
+        if not process_cmds.first and json_output :
             print(",")
         cmds = await next_cmd(mc, cmds, json_output)
-        first = False
-    if json_output :
-        print("]")
+        process_cmds.first = False
+process_cmds.first=True
 
 async def process_script(mc, file, json_output=False):
     with open(file, "r") as f :
@@ -1291,7 +1297,7 @@ def usage () :
 
  Arguments :
     -h : prints this help
-    -j : json output
+    -j : json output (disables init file)
     -D : debug
     -S : performs a ble scan and ask for device
     -l : list available ble devices and exit
@@ -1419,14 +1425,18 @@ async def main(argv):
         else :    
             logger.info(f"Connected to {mc.self_info['name']}.")
 
-    if os.path.exists(MCCLI_INIT_SCRIPT) :
+    if os.path.exists(MCCLI_INIT_SCRIPT) and not json_output :
         logger.debug(f"Executing init script : {MCCLI_INIT_SCRIPT}")
         await process_script(mc, MCCLI_INIT_SCRIPT, json_output)
 
     if len(args) == 0 : # no args, run in chat mode
         await process_cmds(mc, ["chat"], json_output)
     else:
+        if json_output :
+            print("[")
         await process_cmds(mc, args, json_output)
+        if json_output :
+            print("]")
 
 def cli():
     try:
