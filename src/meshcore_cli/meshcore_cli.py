@@ -44,6 +44,7 @@ ANSI_BGREEN = "\033[1;32m"
 ANSI_BLUE = "\033[0;34m"
 ANSI_BBLUE = "\033[1;34m"
 ANSI_YELLOW = "\033[0;33m"
+ANSI_BYELLOW = "\033[1;33m"
 ANSI_RED = "\033[0;31m"
 ANSI_BRED = "\033[1;31m"
 ANSI_MAGENTA = "\033[0;35m"
@@ -53,7 +54,8 @@ ANSI_BCYAN = "\033[1;36m"
 ANSI_LIGHT_BLUE = "\033[0;94m"
 ANSI_LIGHT_GREEN = "\033[0;92m"
 ANSI_LIGHT_YELLOW = "\033[0;93m"
-ANSI_LIGHT_GRAY="\033[0;90m"
+ANSI_LIGHT_GRAY="\033[0;38;5;247m"
+ANSI_BGRAY="\033[1;38;5;247m"
 
 def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
@@ -193,10 +195,11 @@ def make_completion_dict(contacts):
                  "print_snr" : {"on":None, "off": None},
                  "json_msgs" : {"on":None, "off": None},
                  "color" : {"on":None, "off":None},
+                 "print_name" : {"on":None, "off":None},
                  "classic_prompt" : {"on" : None, "off":None}},
         "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
                  "tx" : None, "print_snr" : None, "json_msgs":None, "color":None,
-                 "classic_prompt":None},
+                 "print_name":None, "classic_prompt":None},
         "reboot" : None,
         "card" : None,
         "upload_card" : None,
@@ -281,11 +284,22 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         while True:
             color = process_event_message.color
             classic = interactive_loop.classic or not color
+            print_name = interactive_loop.print_name
 
             if classic:
                 prompt = ""
             else:            
                 prompt = f"{ANSI_INVERT}"
+
+            # some possible symbols for prompts 🭬🬛🬗🭬🬛🬃🬗🭬🬛🬃🬗🬏🭀🭋🭨🮋
+            if print_name :
+                prompt = prompt + f"{ANSI_BGRAY}"
+                prompt = prompt + f"{mc.self_info['name']}"
+                if classic : 
+                    prompt = prompt + " > "
+                else :
+                    prompt = prompt + "🭨" 
+
             if not last_ack:
                 prompt = prompt + f"{ANSI_BRED}"
                 if classic :
@@ -298,9 +312,12 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 prompt = prompt + f"{ANSI_BGREEN}"
             else :
                 prompt = prompt + f"{ANSI_BBLUE}"
-            # some possible symbols 🭬🬛🬗🭬🬛🬃🬗🭬🬛🬃🬗🬏🭀🭋🭨🮋
             if not classic:
                 prompt = prompt + f"{ANSI_INVERT}"
+
+            if print_name and not classic :
+                prompt = prompt + "🭬"
+
             prompt = prompt + f"{contact['adv_name']}"
             if classic :
                 prompt = prompt + f"{ANSI_NORMAL}> "
@@ -452,7 +469,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, ["chan", str(contact["chan_nb"]), line]  )
 
             elif contact["type"] == 1 : # chat, send to recipient and wait ack
-                await msg_ack(mc, contact, line)
+                last_ack = await msg_ack(mc, contact, line)
 
             elif contact["type"] == 2 or contact["type"] == 3 : # repeater, send cmd
                 await process_cmds(mc, ["cmd", contact["adv_name"], line])
@@ -464,6 +481,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
         print("Exiting cli")
 interactive_loop.classic = False
+interactive_loop.print_name = True
 
 async def msg_ack (mc, contact, msg) :
     result = await mc.commands.send_msg(contact, msg)
@@ -577,6 +595,8 @@ async def next_cmd(mc, cmds, json_output=False):
     lon <lon>               : longitude
     coords <lat,lon>        : coordinates
     print_snr <on/off>      : toggle snr display in messages""")
+                    case "print_name":
+                        interactive_loop.print_name = (cmds[2] == "on")
                     case "classic_prompt":
                         interactive_loop.classic = (cmds[2] == "on")
                     case "color" :
@@ -685,6 +705,11 @@ async def next_cmd(mc, cmds, json_output=False):
     radio     : radio parameters
     tx        : tx power
     print_snr : snr display in messages""")
+                    case "print_name":
+                        if json_output :
+                            print(json.dumps({"print_name" : interactive_loop.print_name}))
+                        else:
+                            print(f"{'on' if interactive_loop.print_name else 'off'}")
                     case "classic_prompt":
                         if json_output :
                             print(json.dumps({"classic_prompt" : interactive_loop.classic}))
