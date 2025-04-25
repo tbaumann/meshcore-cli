@@ -178,6 +178,10 @@ def make_completion_dict(contacts):
     for c in it :
         contact_list[c[1]['adv_name']] = None
 
+    contact_list["public"] = None
+    contact_list["ch"] = None
+    contact_list["ch0"] = None
+
     completion_list = {
         "to" : contact_list,
         "to_ch" : None,
@@ -251,8 +255,9 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
         contact = to
     elif len(mc.contacts.items()) == 0 :
         contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-    else:
-        contact = next(iter(mc.contacts.items()))[1]
+    else: # defaults to public chanel
+        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+#        contact = next(iter(mc.contacts.items()))[1]
 
     try:
         while True: # purge msgs
