@@ -1238,6 +1238,12 @@ async def process_cmds (mc, args, json_output=False) :
 process_cmds.first=True
 
 async def process_script(mc, file, json_output=False):
+    if not os.path.exists(file) :
+        logger.info(f"file {file} not found")
+        if json_output :
+            print(json.dumps({"error" : f"file {file} not found"}))
+        return
+
     with open(file, "r") as f :
         lines=f.readlines()
 
