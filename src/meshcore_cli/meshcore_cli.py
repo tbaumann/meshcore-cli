@@ -172,7 +172,7 @@ handle_message.json_output=False
 handle_message.mc=None
 handle_message.above=True
 
-def make_completion_dict(contacts):
+def make_completion_dict(contacts, ):
     contact_list = {}    
 
     contact_list["~"] = None
@@ -365,26 +365,18 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     elif dest.startswith("ch"):
                         dest = int(dest[2:])
                         contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
-                    elif dest == ".." or dest == "~" or dest == "/":
+                    elif dest == ".." or dest == "~" or dest == "/" or dest == mc.self_info['name']:
                         contact = None
                     else :
                         print(f"Contact '{dest}' not found in contacts.")
                 else :
                     contact = nc
 
-            elif line.startswith("to_ch") :
-                last_ack = True
-                dest = int(line.split(" ")[1])
-                if dest == 0:
-                    contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-                else :
-                    contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
-
-            elif line == "to_public" or line == "to_pub" :
-                contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-
             elif line == "to" :
-                print(contact["adv_name"])
+                if contact is None :
+                    print(mc.self_info['name'])
+                else:
+                    print(contact["adv_name"])
 
             elif line == "quit" or line == "q" :
                 break
@@ -419,14 +411,14 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             # special treatment for login (wait for login to complete)
-            elif line.startswith("login ") :
+            elif contact["type"] > 1 and line.startswith("login ") :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
                 await process_cmds(mc, ["wl"])
 
             # same for request status
-            elif line == "rs" or line == "req_status" :
+            elif contact["type"] > 1 and (line == "rs" or line == "req_status") :
                 args = ["rs", contact['adv_name']]
                 await process_cmds(mc, args)
                 await process_cmds(mc, ["ws"])
