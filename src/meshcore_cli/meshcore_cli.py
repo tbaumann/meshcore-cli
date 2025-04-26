@@ -174,11 +174,16 @@ handle_message.above=True
 
 def make_completion_dict(contacts):
     contact_list = {}    
+
+    contact_list["~"] = None
+    contact_list["/"] = None
+    contact_list[".."] = None
+    contact_list["public"] = None
+
     it = iter(contacts.items())
     for c in it :
         contact_list[c[1]['adv_name']] = None
 
-    contact_list["public"] = None
     contact_list["ch"] = None
     contact_list["ch0"] = None
 
@@ -248,16 +253,11 @@ Use \"to\" to select recipient, use Tab to complete name ...
 Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\", \"q\", CTRL+D will end interactive mode""")
 
+    contact = to
+
     await mc.ensure_contacts()
     handle_message.above = True
     await subscribe_to_msgs(mc)
-    if not to is None:
-        contact = to
-    elif len(mc.contacts.items()) == 0 :
-        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-    else: # defaults to public chanel
-        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-#        contact = next(iter(mc.contacts.items()))[1]
 
     try:
         while True: # purge msgs
@@ -265,15 +265,13 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             if res.type == EventType.NO_MORE_MSGS:
                 break
         
-        completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
         if os.path.isdir(MCCLI_CONFIG_DIR) :
             our_history = FileHistory(MCCLI_HISTORY_FILE)
         else:
             our_history = None
 
         # beware, mouse support breaks mouse scroll ...
-        session = PromptSession(completer=completer, 
-                                history=our_history, 
+        session = PromptSession(history=our_history, 
                                 wrap_lines=False, 
                                 mouse_support=False,
                                 complete_style=CompleteStyle.MULTI_COLUMN)
@@ -297,7 +295,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 prompt = f"{ANSI_INVERT}"
 
             # some possible symbols for prompts 🭬🬛🬗🭬🬛🬃🬗🭬🬛🬃🬗🬏🭀🭋🭨🮋
-            if print_name :
+            if print_name or contact is None :
                 prompt = prompt + f"{ANSI_BGRAY}"
                 prompt = prompt + f"{mc.self_info['name']}"
                 if classic : 
@@ -305,39 +303,44 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 else :
                     prompt = prompt + "🭨" 
 
-            if not last_ack:
-                prompt = prompt + f"{ANSI_BRED}"
+            if not contact is None :
+                if not last_ack:
+                    prompt = prompt + f"{ANSI_BRED}"
+                    if classic :
+                        prompt = prompt + "!"
+                elif contact["type"] == 3 : # room server
+                    prompt = prompt + f"{ANSI_BCYAN}"
+                elif contact["type"] == 2 :
+                    prompt = prompt + f"{ANSI_BMAGENTA}"
+                elif contact["type"] == 0 : # public channel
+                    prompt = prompt + f"{ANSI_BGREEN}"
+                else :
+                    prompt = prompt + f"{ANSI_BBLUE}"
+                if not classic:
+                    prompt = prompt + f"{ANSI_INVERT}"
+
+                if print_name and not classic :
+                    prompt = prompt + "🭬"
+
+                prompt = prompt + f"{contact['adv_name']}"
                 if classic :
-                    prompt = prompt + "!"
-            elif contact["type"] == 3 : # room server
-                prompt = prompt + f"{ANSI_BCYAN}"
-            elif contact["type"] == 2 :
-                prompt = prompt + f"{ANSI_BMAGENTA}"
-            elif contact["type"] == 0 : # public channel
-                prompt = prompt + f"{ANSI_BGREEN}"
-            else :
-                prompt = prompt + f"{ANSI_BBLUE}"
-            if not classic:
-                prompt = prompt + f"{ANSI_INVERT}"
+                    prompt = prompt + f"{ANSI_NORMAL} > "
+                else:
+                    prompt = prompt + f"{ANSI_NORMAL}🭬"
 
-            if print_name and not classic :
-                prompt = prompt + "🭬"
+                prompt = prompt + f"{ANSI_END}"
 
-            prompt = prompt + f"{contact['adv_name']}"
-            if classic :
-                prompt = prompt + f"{ANSI_NORMAL}> "
-            else:
-                prompt = prompt + f" {ANSI_NORMAL}🭬"
-
-            prompt = prompt + f"{ANSI_END}"
-
-            if not color :
-                prompt=escape_ansi(prompt)
+                if not color :
+                    prompt=escape_ansi(prompt)
 
             session.app.ttimeoutlen = 0.2
             session.app.timeoutlen = 0.2
 
-            line = await session.prompt_async(ANSI(prompt), complete_while_typing=False,
+            completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
+
+            line = await session.prompt_async(ANSI(prompt), 
+                                              complete_while_typing=False,
+                                              completer=completer,
                                               key_bindings=bindings)
 
             if line == "" : # blank line
@@ -348,29 +351,53 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = shlex.split(line[1:])
                 await process_cmds(mc, args)
 
-            # commands that are passed through
-            elif line.startswith(".") or\
-                    line.startswith("set ") or\
-                    line.startswith("get ") or\
-                    line.startswith("clock") or\
-                    line.startswith("time") or\
-                    line.startswith("ver") or\
-                    line.startswith("reboot") or\
-                    line.startswith("advert") or\
-                    line.startswith("floodadv") or\
-                    line.startswith("chan") or\
-                    line.startswith("card") or \
-                    line.startswith("lc") or \
-                    line.startswith("script") or \
-                    line.startswith("upload_card") or \
-                    line == "infos" or line == "i" :
-                args = shlex.split(line)
+            elif line.startswith("@") : # send a cli command that won't need quotes !
+                args=["cli", line[1:]]
                 await process_cmds(mc, args)
 
-            # commands that take one parameter (don't need for quotes)
+            elif line.startswith("to ") : # dest
+                last_ack = True
+                dest = line[3:]
+                nc = mc.get_contact_by_name(dest)
+                if nc is None:
+                    if dest == "public" :
+                        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                    elif dest.startswith("ch"):
+                        dest = int(dest[2:])
+                        contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+                    elif dest == ".." or dest == "~" or dest == "/":
+                        contact = None
+                    else :
+                        print(f"Contact '{dest}' not found in contacts.")
+                else :
+                    contact = nc
+
+            elif line.startswith("to_ch") :
+                last_ack = True
+                dest = int(line.split(" ")[1])
+                if dest == 0:
+                    contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                else :
+                    contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+
+            elif line == "to_public" or line == "to_pub" :
+                contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+
+            elif line == "to" :
+                print(contact["adv_name"])
+
+            elif line == "quit" or line == "q" :
+                break
+
+            # commands that take one parameter (don't need quotes)
             elif line.startswith("public ") or line.startswith("cli ") :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], cmds[1]]
+                await process_cmds(mc, args)
+
+            # commands are passed through if at root
+            elif contact is None or line.startswith(".") :
+                args = shlex.split(line)
                 await process_cmds(mc, args)
 
             # commands that take contact as second arg will be sent to recipient
@@ -408,40 +435,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args=["cmd", contact['adv_name'], line[1:]]
                 await process_cmds(mc, args)
 
-            elif line.startswith("@") : # send a cli command that won't need quotes !
-                args=["cli", line[1:]]
-                await process_cmds(mc, args)
-
-            elif line.startswith("to ") : # dest
-                last_ack = True
-                dest = line[3:]
-                nc = mc.get_contact_by_name(dest)
-                if nc is None:
-                    if dest == "public" :
-                        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-                    elif dest.startswith("ch"):
-                        dest = int(dest[2:])
-                        contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
-                    else :
-                        print(f"Contact '{dest}' not found in contacts.")
-                else :
-                    contact = nc
-
-            elif line.startswith("to_ch") :
-                last_ack = True
-                dest = int(line.split(" ")[1])
-                if dest == 0:
-                    contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-                else :
-                    contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
-
-            elif line == "to_public" or line == "to_pub" :
-                contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
-
-            elif line == "to" :
-                print(contact["adv_name"])
-
-            elif line == "reset path" : # reset path from terminal chat
+            elif line == "reset path" : # reset path for compat with terminal chat
                 res = await mc.commands.reset_path(contact)
                 logger.debug(res)
                 if res.type == EventType.ERROR:
@@ -449,9 +443,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 else:
                     print(f"Path to contact['adv_name'] has been reset")
                 await mc.commands.get_contacts()
-
-            elif line == "quit" or line == "q" :
-                break
 
             elif line == "list" : # list command from chat displays contacts on a line
                 it = iter(mc.contacts.items())
