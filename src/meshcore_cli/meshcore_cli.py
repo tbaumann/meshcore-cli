@@ -172,67 +172,99 @@ handle_message.json_output=False
 handle_message.mc=None
 handle_message.above=True
 
-def make_completion_dict(contacts, ):
+def make_completion_dict(contacts, to=None):
     contact_list = {}    
+    to_list = {}
 
-    contact_list["~"] = None
-    contact_list["/"] = None
-    contact_list[".."] = None
-    contact_list["public"] = None
+    to_list["~"] = None
+    to_list["/"] = None
+    to_list[".."] = None
+    to_list["public"] = None
 
     it = iter(contacts.items())
     for c in it :
         contact_list[c[1]['adv_name']] = None
 
-    contact_list["ch"] = None
-    contact_list["ch0"] = None
+    to_list.update(contact_list)
+
+    to_list["ch"] = None
+    to_list["ch0"] = None
 
     completion_list = {
-        "to" : contact_list,
-        "to_ch" : None,
-        "to_public" : None,
-        "send" : None,
-        "cmd" : None,
+        "to" : to_list,
         "public" : None,
         "chan" : None,
-        "ver" : None,
-        "infos" : None,
-        "advert" : None,
-        "floodadv" : None,
-        "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, 
-                 "name" : None, "lat" : None, "lon" : None, "coords" : None, 
-                 "print_snr" : {"on":None, "off": None},
-                 "json_msgs" : {"on":None, "off": None},
-                 "color" : {"on":None, "off":None},
-                 "print_name" : {"on":None, "off":None},
-                 "classic_prompt" : {"on" : None, "off":None}},
-        "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
-                 "tx" : None, "print_snr" : None, "json_msgs":None, "color":None,
-                 "print_name":None, "classic_prompt":None},
-        "reboot" : None,
-        "card" : None,
-        "upload_card" : None,
-        "login" : None,
-        "logout" : None,
-        "req_status" : None,
-        "time" : None,
-        "clock" : {"sync" : None},
-        "contact_info": None,
-        "path": None,
-        "export_contact" : None,
-        "upload_contact" : None,
-        "reset_path" : None,
-        "change_path" : None,
+    }
+
+    if to is None :
+        completion_list.update({
+            "ver" : None,
+            "infos" : None,
+            "advert" : None,
+            "floodadv" : None,
+            "msg" : contact_list,
+            "time" : None,
+            "clock" : {"sync" : None},
+            "reboot" : None,
+            "card" : None,
+            "upload_card" : None,
+            "contact_info": contact_list,
+            "export_contact" : contact_list,
+            "upload_contact" : contact_list,
+            "path": contact_list,
+            "reset_path" : contact_list,
+            "change_path" : contact_list,
+            "remove_contact" : contact_list,
+            "login" : contact_list,
+            "wl" : contact_list,
+            "cmd" : contact_list,
+            "req_status" : contact_list,
+            "logout" : contact_list,
+            "set" : {"pin" : None, "radio" : None, "tuning" : None, "tx" : None, 
+                    "name" : None, "lat" : None, "lon" : None, "coords" : None, 
+                    "print_snr" : {"on":None, "off": None},
+                    "json_msgs" : {"on":None, "off": None},
+                    "color" : {"on":None, "off":None},
+                    "print_name" : {"on":None, "off":None},
+                    "classic_prompt" : {"on" : None, "off":None}},
+            "get" : {"name" : None, "bat" : None, "coords" : None, "radio" : None, 
+                    "tx" : None, "print_snr" : None, "json_msgs":None, "color":None,
+                    "print_name":None, "classic_prompt":None},
+        })
+    else :
+        completion_list.update({
+            "send" : None,
+        })
+
+        if to['type'] > 0: # contact
+            completion_list.update({
+                "contact_info": None,
+                "path": None,
+                "export_contact" : None,
+                "upload_contact" : None,
+                "reset_path" : None,
+                "change_path" : None,
+            })
+
+        if to['type'] > 1 : # repeaters and room servers
+            completion_list.update({
+                "login" : None,
+                "cmd" : None,
+                "req_status" : None,
+                "logout" : None,
+                "advert" : None,
+                "time" : None,
+                "clock" : {"sync" : None},
+                "reboot" : None,
+                "card" : None,
+            })
+
+    completion_list.update({
         "cli" : None,
         "script" : None,
-        "$remove_contact" : contact_list,
-        "$msg" : contact_list,
-        "$cmd" : contact_list,
-        "$login" : contact_list,
-        "$logout" : contact_list,
-        "$wl" : contact_list,
         "quit" : None
-    }
+    })
+
     return completion_list
 
 # Subscribe to incoming messages
@@ -336,7 +368,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             session.app.ttimeoutlen = 0.2
             session.app.timeoutlen = 0.2
 
-            completer = NestedCompleter.from_nested_dict(make_completion_dict(mc.contacts))
+            completer = NestedCompleter.from_nested_dict(
+                            make_completion_dict(mc.contacts, to=contact))
 
             line = await session.prompt_async(ANSI(prompt), 
                                               complete_while_typing=False,
