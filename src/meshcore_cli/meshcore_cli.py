@@ -203,6 +203,7 @@ def make_completion_dict(contacts, to=None):
             "advert" : None,
             "floodadv" : None,
             "msg" : contact_list,
+            "wait_ack" : None,
             "time" : None,
             "clock" : {"sync" : None},
             "reboot" : None,
@@ -216,7 +217,6 @@ def make_completion_dict(contacts, to=None):
             "change_path" : contact_list,
             "remove_contact" : contact_list,
             "login" : contact_list,
-            "wl" : contact_list,
             "cmd" : contact_list,
             "req_status" : contact_list,
             "logout" : contact_list,
@@ -249,14 +249,54 @@ def make_completion_dict(contacts, to=None):
         if to['type'] > 1 : # repeaters and room servers
             completion_list.update({
                 "login" : None,
-                "cmd" : None,
-                "req_status" : None,
                 "logout" : None,
+                "req_status" : None,
+                "cmd" : None,
+                "ver" : None,
                 "advert" : None,
                 "time" : None,
                 "clock" : {"sync" : None},
                 "reboot" : None,
-                "card" : None,
+                "start ota" : None,
+                "password" : None,
+                "get" : {"name" : None, 
+                         "role":None,
+                         "radio" : None, 
+                         "freq":None, 
+                         "tx":None, 
+                         "af" : None, 
+                         "repeat" : None,
+                         "allow.read.only" : None, 
+                         "flood.advert.interval" : None, 
+                         "flood.max":None, 
+                         "advert.interval" : None,
+                         "guest.password" : None, 
+                         "rxdelay": None, 
+                         "txdelay": None, 
+                         "direct.tx_delay":None,
+                         "public.key":None, 
+                         "lat" : None, 
+                         "lon" : None, 
+                         },
+                "set" : {"name" : None, 
+                         "radio" : None, 
+                         "freq" : None, 
+                         "tx" : None, 
+                         "af": None, 
+                         "repeat" : {"on": None, "off": None}, 
+                         "flood.advert.interval" : None, 
+                         "flood.max" : None, 
+                         "advert.interval" : None, 
+                         "guest.password" : None, 
+                         "allow.read.only" : {"on": None, "off": None},
+                         "rxdelay" : None, 
+                         "txdelay": None, 
+                         "direct.txdelay" : None, 
+                         "lat" : None, 
+                         "lon" : None, 
+                         },
+                "erase": None,
+                "log" : {"start" : None, "stop" : None, "erase" : None}
             })
 
     completion_list.update({
@@ -431,6 +471,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line == "uc" or line == "upload_contact" or\
                     line == "rp" or line == "reset_path" or\
                     line == "contact_info" or line == "ci" or\
+                    line == "req_status" or line == "rs" or\
                     line == "path" or\
                     line == "logout" ):
                 args = [line, contact['adv_name']]
@@ -438,36 +479,19 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
             # same but for commands with a parameter
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
-                    line.startswith("cp ") or line.startswith("change_path ")) :
+                    line.startswith("cp ") or line.startswith("change_path ") or\
+                    line.startswith("login ")) :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
-
-            # special treatment for login (wait for login to complete)
-            elif contact["type"] > 1 and line.startswith("login ") :
-                cmds = line.split(" ", 1)
-                args = [cmds[0], contact['adv_name'], cmds[1]]
-                await process_cmds(mc, args)
-                await process_cmds(mc, ["wl"])
-
-            # same for request status
-            elif contact["type"] > 1 and (line == "rs" or line == "req_status") :
-                args = ["rs", contact['adv_name']]
-                await process_cmds(mc, args)
-                await process_cmds(mc, ["ws"])
 
             elif line.startswith(":") : # : will send a command to current recipient
                 args=["cmd", contact['adv_name'], line[1:]]
                 await process_cmds(mc, args)
 
             elif line == "reset path" : # reset path for compat with terminal chat
-                res = await mc.commands.reset_path(contact)
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error resetting path: {res}")
-                else:
-                    print(f"Path to contact['adv_name'] has been reset")
-                await mc.commands.get_contacts()
+                args = ["reset_path", contact['adv_name']]
+                await process_cmds(mc, args)
 
             elif line == "list" : # list command from chat displays contacts on a line
                 it = iter(mc.contacts.items())
@@ -859,7 +883,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                         print(json.dumps(res.payload, indent=4))
 
-            case "login" | "l" | "[[" :
+            case "login" | "l" :
                 argnum = 2
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
@@ -876,9 +900,21 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"error" : "Error while login"}))
                         else:
                             print(f"Error while loging: {res}")
-                    elif json_output :
-                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-                        print(json.dumps(res.payload))
+                    else: # should probably wait for the good ack
+                        res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
+                        logger.debug(res)
+                        if res is None:
+                            print("Login failed : Timeout waiting response")
+                        elif json_output :
+                            if res.type == EventType.LOGIN_SUCCESS:
+                                print(json.dumps({"login_success" : True}, indent=4))
+                            else:
+                                print(json.dumps({"login_success" : False, "error" : "login failed"}, indent=4))
+                        else:
+                            if res.type == EventType.LOGIN_SUCCESS:
+                                print("Login success")
+                            else:
+                                print("Login failed")
 
             case "logout" :
                 argnum = 1
@@ -901,8 +937,16 @@ async def next_cmd(mc, cmds, json_output=False):
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting status: {res}")
-                elif json_output :
-                    print(json.dumps(res.payload, indent=4))
+                else :
+                    res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
+                    logger.debug(res)
+                    if res is None:
+                        if json_output :
+                            print(json.dumps({"error" : "Timeout waiting status"}))
+                        else:
+                            print("Timeout waiting status")
+                    else :
+                        print(json.dumps(res.payload, indent=4))
 
             case "contacts" | "list" | "lc":
                 res = await mc.commands.get_contacts()
@@ -1168,33 +1212,6 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     print("Msg acked")
 
-            case "wait_login" | "wl" | "]]":
-                res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
-                logger.debug(res)
-                if res is None:
-                    print("Login failed : Timeout waiting response")
-                elif json_output :
-                    if res.type == EventType.LOGIN_SUCCESS:
-                        print(json.dumps({"login_success" : True}, indent=4))
-                    else:
-                        print(json.dumps({"login_success" : False, "error" : "login failed"}, indent=4))
-                else:
-                    if res.type == EventType.LOGIN_SUCCESS:
-                        print("Login success")
-                    else:
-                        print("Login failed")
-
-            case "wait_status" | "ws" :
-                res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
-                logger.debug(res)
-                if res is None:
-                    if json_output :
-                        print(json.dumps({"error" : "Timeout waiting status"}))
-                    else:
-                        print("Timeout waiting status")
-                else :
-                    print(json.dumps(res.payload, indent=4))
-
             case "msgs_subscribe" | "ms" :
                 await subscribe_to_msgs(mc)
 
@@ -1287,10 +1304,10 @@ def command_help():
     msg <name> <msg>       : send message to node by name           m  {
     wait_ack               : wait an ack                            wa }
     chan <nb> <msg>        : send message to channel number <nb>    ch
-    public                 : send message to public channel (0)     dch
+    public <msg>           : send message to public channel (0)     dch
     recv                   : reads next msg                         r
-    sync_msgs              : gets all unread msgs from the node     sm
     wait_msg               : wait for a message and read it         wm
+    sync_msgs              : gets all unread msgs from the node     sm
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
@@ -1308,13 +1325,11 @@ def command_help():
     reset_path <ct>        : resets path to a contact to flood      rp
     change_path <ct> <pth> : change the path to a contact           cp
   Repeaters
-    login <name> <pwd>     : log into a node (rep) with given pwd   l  [[ 
-    wait_login             : wait for login (timeouts after 5sec)   wl ]]
+    login <name> <pwd>     : log into a node (rep) with given pwd   l
     logout <name>          : log out of a repeater
     cmd <name> <cmd>       : sends a command to a repeater (no ack) c  [
     wmt8                   : wait for a msg (reply) with a timeout     ]
-    req_status <name>      : requests status from a node            rs
-    wait_status            : wait and print reply                   ws""")
+    req_status <name>      : requests status from a node            rs""")
 
 def usage () :
     """ Prints some help """
