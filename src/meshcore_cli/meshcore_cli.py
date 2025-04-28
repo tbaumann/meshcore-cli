@@ -110,6 +110,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                 name = data["pubkey_prefix"]
             else:
                 name = ct["adv_name"]
+                process_event_message.last_node=ct
 
             if ct is None: # Unknown
                 disp = f"{ANSI_RED}"
@@ -145,8 +146,10 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
             if data["channel_idx"] == 0: #public
                 disp = f"{ANSI_GREEN}public {path_str}"
+                process_event_message.last_node = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
             else :
                 disp = f"{ANSI_GREEN}ch{data['channel_idx']} {path_str}"
+                process_event_message.last_node = {"adv_name" : f"ch{data['channel_idx']}", "type" : 0, "chan_nb" : data['channel_idx']}
             disp = disp + f"{ANSI_END}"
             disp = disp + f": {data['text']}"
 
@@ -162,6 +165,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
     return True
 process_event_message.print_snr=False
 process_event_message.color=True
+process_event_message.last_node=None
 
 async def handle_message(event):
     """ Process incoming message events """
@@ -178,6 +182,8 @@ def make_completion_dict(contacts, to=None):
 
     to_list["~"] = None
     to_list["/"] = None
+    if not process_event_message.last_node is None:
+        to_list["!"] = None
     to_list[".."] = None
     to_list["public"] = None
 
@@ -456,6 +462,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                         contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
                     elif dest == ".." or dest == "~" or dest == "/" or dest == mc.self_info['name']:
                         contact = None
+                    elif dest == "!" and not process_event_message.last_node is None:
+                        contact = process_event_message.last_node
                     else :
                         print(f"Contact '{dest}' not found in contacts.")
                 else :
@@ -1285,11 +1293,7 @@ async def next_cmd(mc, cmds, json_output=False):
 async def process_cmds (mc, args, json_output=False) :
     cmds = args
     while cmds and len(cmds) > 0 and cmds[0][0] != '#' :
-        if not process_cmds.first and json_output :
-            print(",")
         cmds = await next_cmd(mc, cmds, json_output)
-        process_cmds.first = False
-process_cmds.first=True
 
 async def process_script(mc, file, json_output=False):
     if not os.path.exists(file) :
@@ -1490,11 +1494,7 @@ async def main(argv):
     if len(args) == 0 : # no args, run in chat mode
         await process_cmds(mc, ["chat"], json_output)
     else:
-        if json_output :
-            print("[")
         await process_cmds(mc, args, json_output)
-        if json_output :
-            print("]")
 
 def cli():
     try:
