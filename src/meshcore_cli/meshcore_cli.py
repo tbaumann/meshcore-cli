@@ -455,28 +455,28 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             elif line.startswith("to ") : # dest
-                last_ack = True
-                pc = prev_contact
-                prev_contact = contact
                 dest = line[3:]
                 if dest.startswith("\"") or dest.startswith("\'") : # if name starts with a quote
                     dest = shlex.split(dest)[0] # use shlex.split to get contact name between quotes                    
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
                     if dest == "public" :
-                        contact = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                        nc = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
                     elif dest.startswith("ch"):
                         dest = int(dest[2:])
-                        contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+                        nc = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
                     elif dest == ".." : # previous recipient 
-                        contact = pc
+                        nc = prev_contact
                     elif dest == "~" or dest == "/" or dest == mc.self_info['name']:
-                        contact = None
+                        nc = None
                     elif dest == "!" :
-                        contact = process_event_message.last_node
+                        nc = process_event_message.last_node
                     else :
                         print(f"Contact '{dest}' not found in contacts.")
-                else :
+                        nc = contact
+                if nc != contact :
+                    last_ack = True
+                    prev_contact = contact
                     contact = nc
 
             elif line == "to" :
