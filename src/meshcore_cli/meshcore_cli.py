@@ -246,6 +246,8 @@ def make_completion_dict(contacts, to=None):
                      "radio" : None, 
                      "tx" : None, 
                      "coords" : None, 
+                     "lat" : None,
+                     "lon" : None,
                      "print_snr" : None, 
                      "json_msgs":None, 
                      "color":None,
@@ -800,6 +802,8 @@ async def next_cmd(mc, cmds, json_output=False):
     name      : node name
     bat       : battery level in mV
     coords    : adv coordinates
+    lat       : latitude
+    lon       : longitude
     radio     : radio parameters
     tx        : tx power
     print_snr : snr display in messages""")
@@ -846,6 +850,18 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"lat": mc.self_info["adv_lat"], "lon":mc.self_info["adv_lon"]}))
                         else:
                             print(f"{mc.self_info['adv_lat']},{mc.self_info['adv_lon']}")
+                    case "lat":
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"lat": mc.self_info["adv_lat"]}))
+                        else:
+                            print(f"{mc.self_info['adv_lat']}")
+                    case "lon":
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"lon": mc.self_info["adv_lon"]}))
+                        else:
+                            print(f"{mc.self_info['adv_lon']}")
                     case "radio":
                         await mc.commands.send_appstart()
                         if json_output :
