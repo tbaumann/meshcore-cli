@@ -456,6 +456,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 pc = prev_contact
                 prev_contact = contact
                 dest = line[3:]
+                if dest.startswith("\"") or dest.startswith("\'") : # if name starts with a quote
+                    dest = shlex.split(dest)[0] # use shlex.split to get contact name between quotes                    
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
                     if dest == "public" :
