@@ -1374,6 +1374,7 @@ def command_help():
     recv                   : reads next msg                         r
     wait_msg               : wait for a message and read it         wm
     sync_msgs              : gets all unread msgs from the node     sm
+    msgs_subscribe         : display msgs as they arrive            ms
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
