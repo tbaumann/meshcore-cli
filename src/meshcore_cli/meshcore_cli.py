@@ -88,7 +88,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
         logger.error(f"Error retrieving messages: {ev.payload}")
         return False
     elif json_output :
-        if print_above :
+        if above :
             print_above(json.dumps(ev.payload))
         else:
             print(json.dumps(ev.payload), end=end, flush=True)
@@ -140,7 +140,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             if above:
                 print_above(disp)
             else:
-                print(disp)
+                print(disp, flush=True)
 
         elif (data['type'] == "CHAN") :
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
@@ -174,7 +174,21 @@ async def handle_message(event):
                                 json_output=handle_message.json_output)
 handle_message.json_output=False
 handle_message.mc=None
-handle_message.above=True
+handle_message.above=False
+
+async def subscribe_to_msgs(mc, json_output=False, above=False):
+    """ Subscribe to incoming messages """
+    global PS, CS
+    await mc.ensure_contacts()
+    handle_message.json_output = json_output
+    handle_message.above = above
+    # Subscribe to private messages
+    if PS is None :
+        PS = mc.subscribe(EventType.CONTACT_MSG_RECV, handle_message)
+    # Subscribe to channel messages
+    if CS is None :
+        CS = mc.subscribe(EventType.CHANNEL_MSG_RECV, handle_message)
+    await mc.start_auto_message_fetching()
 
 def make_completion_dict(contacts, to=None):
     contact_list = {}    
@@ -331,18 +345,6 @@ def make_completion_dict(contacts, to=None):
 
     return completion_list
 
-# Subscribe to incoming messages
-async def subscribe_to_msgs(mc):
-    global PS, CS
-    await mc.ensure_contacts()
-    # Subscribe to private messages
-    if PS is None :
-        PS = mc.subscribe(EventType.CONTACT_MSG_RECV, handle_message)
-    # Subscribe to channel messages
-    if CS is None :
-        CS = mc.subscribe(EventType.CHANNEL_MSG_RECV, handle_message)
-    await mc.start_auto_message_fetching()
-
 async def interactive_loop(mc, to=None) :
     print("""Interactive mode, most commands from terminal chat should work.
 Use \"to\" to select recipient, use Tab to complete name ...
@@ -353,8 +355,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     prev_contact = None
 
     await mc.ensure_contacts()
-    handle_message.above = True
-    await subscribe_to_msgs(mc)
+    await subscribe_to_msgs(mc, above=True)
 
     try:
         while True: # purge msgs
@@ -493,11 +494,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [cmds[0], cmds[1]]
                 await process_cmds(mc, args)
 
-            # commands are passed through if at root
-            elif contact is None or line.startswith(".") :
-                args = shlex.split(line)
-                await process_cmds(mc, args)
-
             # lines starting with ! are sent as reply to last received msg
             elif line.startswith("!"):
                 ln = process_event_message.last_node
@@ -509,6 +505,11 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     last_ack = await msg_ack(mc, ln, line[1:])
                     if last_ack == False :
                         contact = ln
+
+            # commands are passed through if at root
+            elif contact is None or line.startswith(".") :
+                args = shlex.split(line)
+                await process_cmds(mc, args)
 
             # commands that take contact as second arg will be sent to recipient
             elif contact["type"] > 0 and (line == "sc" or line == "share_contact" or\
@@ -565,7 +566,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, ["cmd", contact["adv_name"], line])
 
     except (EOFError, KeyboardInterrupt):
-        mc.stop()
         print("Exiting cli")
     except asyncio.CancelledError:
         # Handle task cancellation from KeyboardInterrupt in asyncio.run()
@@ -1236,6 +1236,16 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 1
                 await asyncio.sleep(int(cmds[1]))
 
+            case "wait_key" | "wk" :
+                try :
+                    ps = PromptSession()
+                    if json_output:
+                        await ps.prompt_async()
+                    else:
+                        await ps.prompt_async("Press Enter to continue ...")
+                except (EOFError, KeyboardInterrupt, asyncio.CancelledError):
+                    pass
+
             case "wait_msg" | "wm" :
                 ev = await mc.wait_for_event(EventType.MESSAGES_WAITING)
                 if ev is None:
@@ -1272,7 +1282,7 @@ async def next_cmd(mc, cmds, json_output=False):
                     print("Msg acked")
 
             case "msgs_subscribe" | "ms" :
-                await subscribe_to_msgs(mc)
+                await subscribe_to_msgs(mc, json_output=json_output)
 
             case "interactive" | "im" | "chat" :
                 await interactive_loop(mc)
@@ -1355,6 +1365,7 @@ def command_help():
     ver                    : firmware version                       v
     reboot                 : reboots node
     sleep <secs>           : sleeps for a given amount of secs      s
+    wait_key               : wait until user presses <Enter>        wk
   Messenging
     msg <name> <msg>       : send message to node by name           m  {
     wait_ack               : wait an ack                            wa }
