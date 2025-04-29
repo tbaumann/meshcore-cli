@@ -496,6 +496,18 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = shlex.split(line)
                 await process_cmds(mc, args)
 
+            # lines starting with ! are sent as reply to last received msg
+            elif line.startswith("!"):
+                ln = process_event_message.last_node
+                if ln is None :
+                    print("No received msg yet !")
+                elif ln["type"] == 0 :
+                    await process_cmds(mc, ["chan", str(contact["chan_nb"]), line]  )
+                else :
+                    last_ack = await msg_ack(mc, ln, line[1:])
+                    if last_ack == False :
+                        contact = ln
+
             # commands that take contact as second arg will be sent to recipient
             elif contact["type"] > 0 and (line == "sc" or line == "share_contact" or\
                     line == "ec" or line == "export_contact" or\
