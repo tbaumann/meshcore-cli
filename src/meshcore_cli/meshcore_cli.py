@@ -348,6 +348,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 \"quit\", \"q\", CTRL+D will end interactive mode""")
 
     contact = to
+    prev_contact = None
 
     await mc.ensure_contacts()
     handle_message.above = True
@@ -452,6 +453,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 
             elif line.startswith("to ") : # dest
                 last_ack = True
+                pc = prev_contact
+                prev_contact = contact
                 dest = line[3:]
                 nc = mc.get_contact_by_name(dest)
                 if nc is None:
@@ -460,7 +463,9 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     elif dest.startswith("ch"):
                         dest = int(dest[2:])
                         contact = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
-                    elif dest == ".." or dest == "~" or dest == "/" or dest == mc.self_info['name']:
+                    elif dest == ".." : # previous recipient 
+                        contact = pc
+                    elif dest == "~" or dest == "/" or dest == mc.self_info['name']:
                         contact = None
                     elif dest == "!" and not process_event_message.last_node is None:
                         contact = process_event_message.last_node
