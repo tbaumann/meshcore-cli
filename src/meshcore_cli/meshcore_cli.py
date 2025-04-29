@@ -471,7 +471,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                         contact = pc
                     elif dest == "~" or dest == "/" or dest == mc.self_info['name']:
                         contact = None
-                    elif dest == "!" and not process_event_message.last_node is None:
+                    elif dest == "!" :
                         contact = process_event_message.last_node
                     else :
                         print(f"Contact '{dest}' not found in contacts.")
