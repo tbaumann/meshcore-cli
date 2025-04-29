@@ -1503,7 +1503,7 @@ async def main(argv):
     elif not serial_port is None : # connect via serial port
         con = SerialConnection(serial_port, baudrate)
         await con.connect()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.2)
     else : #connect via ble
         con = BLEConnection(address)
         address = await con.connect()
