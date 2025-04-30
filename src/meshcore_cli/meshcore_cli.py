@@ -1467,7 +1467,7 @@ async def main(argv):
             case "-T" :
                 timeout = float(arg)
             case "-v":
-                print (f"meshcore cli version {VERSION}")
+                print (f"meshcore-cli: command line interface to MeshCore version {VERSION}")
                 return
             case "-l" :
                 devices = await BleakScanner.discover(timeout=timeout)
