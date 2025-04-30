@@ -21,6 +21,9 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
+# Version
+VERSION = "0.7.5"
+
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
 MCCLI_ADDRESS = MCCLI_CONFIG_DIR + "default_address"
@@ -1406,6 +1409,7 @@ def usage () :
 
  Arguments :
     -h : prints this help
+    -v : prints version
     -j : json output (disables init file)
     -D : debug
     -S : performs a ble scan and ask for device
@@ -1462,6 +1466,9 @@ async def main(argv):
                 return
             case "-T" :
                 timeout = float(arg)
+            case "-v":
+                print (f"meshcore cli version {VERSION}")
+                return
             case "-l" :
                 devices = await BleakScanner.discover(timeout=timeout)
                 if len(devices) == 0:
