@@ -1441,7 +1441,7 @@ async def main(argv):
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhSlT:")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhvSlT:")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
