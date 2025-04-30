@@ -26,7 +26,7 @@ If using BLE, don't forget to pair your device first (using `bluetoothctl` for i
 
 Configuration files are stored in ```$HOME/.config/meshcore```
 
-If the directory exists, default ble address and history will be stored them.
+If the directory exists, default ble address and history will be stored there.
 
 If there is an initialization script file called ```init```, it will be executed just before the commands provided on command line are executed (and after evaluation of the arguments).
 
