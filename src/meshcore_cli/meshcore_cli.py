@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "0.7.5"
+VERSION = "v0.7.5"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1358,6 +1358,9 @@ async def process_script(mc, file, json_output=False):
         cmds = shlex.split(line[:-1])
         await process_cmds(mc, cmds, json_output)
 
+def version():
+    print (f"meshcore-cli: command line interface to MeshCore companion radios {VERSION}")
+
 def command_help():
     print("""  General commands
     chat                   : enter the chat (interactive) mode
@@ -1403,8 +1406,8 @@ def command_help():
 
 def usage () :
     """ Prints some help """
-    print("""meshcore-cli : CLI interface to MeschCore BLE companion app
-
+    version()
+    print("""
    Usage : meshcore-cli <args> <commands>
 
  Arguments :
@@ -1467,7 +1470,7 @@ async def main(argv):
             case "-T" :
                 timeout = float(arg)
             case "-v":
-                print (f"meshcore-cli: command line interface to MeshCore version {VERSION}")
+                version()
                 return
             case "-l" :
                 devices = await BleakScanner.discover(timeout=timeout)
