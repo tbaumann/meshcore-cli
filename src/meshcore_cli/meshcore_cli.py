@@ -243,6 +243,7 @@ def make_completion_dict(contacts, to=None):
             "cmd" : contact_list,
             "req_status" : contact_list,
             "logout" : contact_list,
+            "req_telemetry" : contact_list,
             "set" : {
                     "name" : None, 
                     "pin" : None, 
@@ -285,6 +286,7 @@ def make_completion_dict(contacts, to=None):
                 "upload_contact" : None,
                 "reset_path" : None,
                 "change_path" : None,
+                "req_telemetry" : None,
             })
 
         if to['type'] > 1 : # repeaters and room servers
@@ -300,6 +302,7 @@ def make_completion_dict(contacts, to=None):
                 "reboot" : None,
                 "start ota" : None,
                 "password" : None,
+                "neighbours" : None,
                 "get" : {"name" : None, 
                          "role":None,
                          "radio" : None, 
@@ -521,8 +524,9 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line == "rp" or line == "reset_path" or\
                     line == "contact_info" or line == "ci" or\
                     line == "req_status" or line == "rs" or\
+                    line == "req_telemetry" or line == "rt" or\
                     line == "path" or\
-                    line == "logout" ):
+                    line == "logout" ) :
                 args = [line, contact['adv_name']]
                 await process_cmds(mc, args)
 
@@ -1009,6 +1013,15 @@ async def next_cmd(mc, cmds, json_output=False):
                             print("Timeout waiting status")
                     else :
                         print(json.dumps(res.payload, indent=4))
+
+            case "req_telemetry" | "lt" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.send_statusreq(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while requesting telemetry")
 
             case "contacts" | "list" | "lc":
                 res = await mc.commands.get_contacts()
