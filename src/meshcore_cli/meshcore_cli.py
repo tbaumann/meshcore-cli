@@ -302,7 +302,7 @@ def make_completion_dict(contacts, to=None):
                 "reboot" : None,
                 "start ota" : None,
                 "password" : None,
-                "neighbours" : None,
+                "neighbors" : None,
                 "get" : {"name" : None, 
                          "role":None,
                          "radio" : None, 
