@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.0.0rc1"
+VERSION = "v0.8.0dev1"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -800,6 +800,14 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps(res.payload, indent=4))
                         else:
                             print("ok")
+                    case _: # custom var
+                        res = await mc.commands.set_custom_var(cmds[1], cmds[2])
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        elif json_output :
+                            print(json.dumps({"result" : "set", "var" : cmds[1], "value" : cmds[2]}))
+                        else :
+                            print(f"Var {cmds[1]} set to {cmds[2]}")
 
             case "get" :
                 argnum = 1
@@ -888,6 +896,27 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps(res.payload, indent=4))
                         else:
                             print(f"Battery level : {res.payload['level']}")
+                    case _ :
+                        res = await mc.commands.get_custom_vars()
+                        logger.debug(res)
+                        if res.type == EventType.ERROR :
+                            if json_output :
+                                print(json.dumps(res))
+                            else :
+                                print(f"Couldn't get custom variables")
+                        else :
+                            try:
+                                val = res.payload[cmds[1]]
+                            except KeyError:
+                                if json_output :
+                                    print(json.dumps({"error" : "Unknown var", "var" : cmds[1]}))
+                                else :
+                                    print(f"Unknown var {cmds[1]}")
+                            else:
+                                if json_output :
+                                    print(json.dumps({"var" : cmds[1], "value" : val}))
+                                else:
+                                    print(val)
 
             case "reboot" :
                 res = await mc.commands.reboot()
