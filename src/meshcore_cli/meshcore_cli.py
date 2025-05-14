@@ -1043,11 +1043,11 @@ async def next_cmd(mc, cmds, json_output=False):
                     else :
                         print(json.dumps(res.payload, indent=4))
 
-            case "req_telemetry" | "lt" :
+            case "req_telemetry" | "rt" :
                 argnum = 1
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.send_statusreq(contact)
+                res = await mc.commands.send_telemetry_req(contact)
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting telemetry")
