@@ -258,6 +258,9 @@ def make_completion_dict(contacts, to=None):
                     "color" : {"on":None, "off":None},
                     "print_name" : {"on":None, "off":None},
                     "classic_prompt" : {"on" : None, "off":None},
+                    "manual_add_contact" : {"on" : None, "off":None},
+                    "telemetry_mode_base" : {"always" : None, "device":None, "never":None},
+                    "telemetry_mode_loc" : {"always" : None, "device":None, "never":None},
                     },
             "get" : {"name" : None, 
                      "bat" : None, 
@@ -271,6 +274,9 @@ def make_completion_dict(contacts, to=None):
                      "color":None,
                      "print_name":None, 
                      "classic_prompt":None,
+                     "manual_add_contact":None,
+                     "telemetry_mode_base":None,
+                     "telemetry_mode_loc":None,
                      },
         })
     else :
@@ -800,14 +806,49 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps(res.payload, indent=4))
                         else:
                             print("ok")
+                    case "manual_add_contacts":
+                        mac = (cmds[2] == "on") or (cmds[2] == "true") or (cmds[2] == "1")
+                        res = await mc.commands.set_manual_add_contacts(mac)
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        else :
+                            print(f"manual add contact: {mac}")
+                    case "telemetry_mode_base":
+                        if (cmds[2] == "2") or (cmds[2] == "all") or (cmds[2] == "yes") or (cmds[2] == "on") :
+                            mode = 2
+                        elif (cmds[2] == "1") or (cmds[2] == "selected") or (cmds[2] == "dev") :
+                            mode = 1
+                        else :
+                            mode = 0
+                        res = await mc.commands.set_telemetry_mode_base(mode)
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        else:
+                            print(f"telemetry mode: {mode}")
+                    case "telemetry_mode_loc":
+                        if (cmds[2] == "2") or (cmds[2].startswith("al")) or (cmds[2] == "yes") or (cmds[2] == "on") :
+                            mode = 2
+                        elif (cmds[2] == "1") or (cmds[2] == "selected") or (cmds[2].startswith("dev")) :
+                            mode = 1
+                        else :
+                            mode = 0
+                        res = await mc.commands.set_telemetry_mode_loc(mode)
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        else:
+                            print(f"telemetry mode: {mode}")
                     case _: # custom var
-                        res = await mc.commands.set_custom_var(cmds[1], cmds[2])
+                        if cmds[1].startswith("_") :
+                            vname = cmds[1][1:]
+                        else:
+                            vname = cmds[1]
+                        res = await mc.commands.set_custom_var(vname, cmds[2])
                         if res.type == EventType.ERROR:
                             print(f"Error : {res}")
                         elif json_output :
-                            print(json.dumps({"result" : "set", "var" : cmds[1], "value" : cmds[2]}))
+                            print(json.dumps({"result" : "set", "var" : vname, "value" : cmds[2]}))
                         else :
-                            print(f"Var {cmds[1]} set to {cmds[2]}")
+                            print(f"Var {vname} set to {cmds[2]}")
 
             case "get" :
                 argnum = 1
@@ -896,6 +937,24 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps(res.payload, indent=4))
                         else:
                             print(f"Battery level : {res.payload['level']}")
+                    case "manual_add_contacts" :
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"manual_add_contacts" : mc.self_info["manual_add_contacts"]}))
+                        else :
+                            print(f"manual_add_contacts: {mc.self_info['manual_add_contacts']}")
+                    case "telemetry_mode_base" :
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"telemetry_mode_base" : mc.self_info["telemetry_mode_base"]}))
+                        else :
+                            print(f"telemetry_mode_base: {mc.self_info['telemetry_mode_base']}")
+                    case "telemetry_mode_loc" :
+                        await mc.commands.sent_appstart()
+                        if json_output :
+                            print(json.dumps({"telemetry_mode_loc" : mc.self_info["telemetry_mode_loc"]}))
+                        else :
+                            print(f"telemetry_mode_loc: {mc.self_info['telemetry_mode_loc']}")
                     case _ :
                         res = await mc.commands.get_custom_vars()
                         logger.debug(res)
@@ -906,7 +965,11 @@ async def next_cmd(mc, cmds, json_output=False):
                                 print(f"Couldn't get custom variables")
                         else :
                             try:
-                                val = res.payload[cmds[1]]
+                                if cmds[1].startswith("_"):
+                                    vname = cmds[1][1:]
+                                else:
+                                    vname = cmds[1]
+                                val = res.payload[vname]
                             except KeyError:
                                 if json_output :
                                     print(json.dumps({"error" : "Unknown var", "var" : cmds[1]}))
@@ -914,7 +977,7 @@ async def next_cmd(mc, cmds, json_output=False):
                                     print(f"Unknown var {cmds[1]}")
                             else:
                                 if json_output :
-                                    print(json.dumps({"var" : cmds[1], "value" : val}))
+                                    print(json.dumps({"var" : vname, "value" : val}))
                                 else:
                                     print(val)
 
