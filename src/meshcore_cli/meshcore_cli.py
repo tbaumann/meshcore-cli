@@ -1114,6 +1114,16 @@ async def next_cmd(mc, cmds, json_output=False):
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting telemetry")
+                else:
+                    res = await mc.wait_for_event(EventType.TELEMETRY_RESPONSE)
+                    logger.debug(res)
+                    if res is None:
+                        if json_output :
+                            print(json.dumps({"error" : "Timeout waiting telemetry"}))
+                        else:
+                            print("Timeout waiting telemetry")
+                    else :
+                        print(json.dumps(res.payload, indent=4))
 
             case "contacts" | "list" | "lc":
                 res = await mc.commands.get_contacts()
