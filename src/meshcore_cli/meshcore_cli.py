@@ -239,6 +239,7 @@ def make_completion_dict(contacts, to=None):
             "reset_path" : contact_list,
             "change_path" : contact_list,
             "remove_contact" : contact_list,
+            "import_contact" : {"meshcore://":None},
             "login" : contact_list,
             "cmd" : contact_list,
             "req_status" : contact_list,
@@ -1239,6 +1240,16 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(json.dumps(res.payload))
                     else :
                         print(res.payload['uri'])
+
+            case "import_contact"|"ic":
+                argnum = 1
+                if cmds[1].startswith("meshcore://") :
+                    res = await mc.commands.import_contact(bytes.fromhex(cmds[1][11:]))
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error while importing contact: {res}")
+                    else:
+                        logger.info("Contact successfully added, refresh with lc")
 
             case "upload_contact" | "uc" :
                 argnum = 1
