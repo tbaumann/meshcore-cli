@@ -258,23 +258,23 @@ def make_completion_dict(contacts, to=None):
                     "color" : {"on":None, "off":None},
                     "print_name" : {"on":None, "off":None},
                     "classic_prompt" : {"on" : None, "off":None},
-                    "manual_add_contact" : {"on" : None, "off":None},
+                    "manual_add_contacts" : {"on" : None, "off":None},
                     "telemetry_mode_base" : {"always" : None, "device":None, "never":None},
                     "telemetry_mode_loc" : {"always" : None, "device":None, "never":None},
                     },
-            "get" : {"name" : None, 
-                     "bat" : None, 
-                     "radio" : None, 
-                     "tx" : None, 
-                     "coords" : None, 
-                     "lat" : None,
-                     "lon" : None,
-                     "print_snr" : None, 
+            "get" : {"name":None, 
+                     "bat":None, 
+                     "radio":None, 
+                     "tx":None, 
+                     "coords":None, 
+                     "lat":None,
+                     "lon":None,
+                     "print_snr":None, 
                      "json_msgs":None, 
                      "color":None,
                      "print_name":None, 
                      "classic_prompt":None,
-                     "manual_add_contact":None,
+                     "manual_add_contacts":None,
                      "telemetry_mode_base":None,
                      "telemetry_mode_loc":None,
                      },
@@ -807,7 +807,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print("ok")
                     case "manual_add_contacts":
-                        mac = (cmds[2] == "on") or (cmds[2] == "true") or (cmds[2] == "1")
+                        mac = (cmds[2] == "on") or (cmds[2] == "true") or (cmds[2] == "yes") or (cmds[2] == "1")
                         res = await mc.commands.set_manual_add_contacts(mac)
                         if res.type == EventType.ERROR:
                             print(f"Error : {res}")
@@ -950,7 +950,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         else :
                             print(f"telemetry_mode_base: {mc.self_info['telemetry_mode_base']}")
                     case "telemetry_mode_loc" :
-                        await mc.commands.sent_appstart()
+                        await mc.commands.send_appstart()
                         if json_output :
                             print(json.dumps({"telemetry_mode_loc" : mc.self_info["telemetry_mode_loc"]}))
                         else :
