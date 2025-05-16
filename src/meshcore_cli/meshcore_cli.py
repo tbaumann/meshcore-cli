@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v0.8.0dev3"
+VERSION = "v0.8.0"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
