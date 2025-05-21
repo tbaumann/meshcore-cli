@@ -278,8 +278,11 @@ def make_completion_dict(contacts, to=None):
                      "manual_add_contacts":None,
                      "telemetry_mode_base":None,
                      "telemetry_mode_loc":None,
+                     "custom":None
                      },
         })
+        completion_list["set"].update(make_completion_dict.custom_vars)
+        completion_list["get"].update(make_completion_dict.custom_vars)
     else :
         completion_list.update({
             "send" : None,
@@ -357,6 +360,7 @@ def make_completion_dict(contacts, to=None):
     })
 
     return completion_list
+make_completion_dict.custom_vars = {}
 
 async def interactive_loop(mc, to=None) :
     print("""Interactive mode, most commands from terminal chat should work.
@@ -388,6 +392,12 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                                 complete_style=CompleteStyle.MULTI_COLUMN)
 
         bindings = KeyBindings()
+
+        res = await mc.commands.get_custom_vars()
+        cv = []
+        if res.type != EventType.ERROR :
+            cv = list(res.payload.keys())
+        make_completion_dict.custom_vars = {k:None for k in cv}
 
         # Add our own key binding.
         @bindings.add("escape")
@@ -863,7 +873,9 @@ async def next_cmd(mc, cmds, json_output=False):
     lon       : longitude
     radio     : radio parameters
     tx        : tx power
-    print_snr : snr display in messages""")
+    print_snr : snr display in messages
+    custom    : all custom variables in json format
+                each custom var can also be get/set directly""")
                     case "print_name":
                         if json_output :
                             print(json.dumps({"print_name" : interactive_loop.print_name}))
@@ -956,6 +968,16 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"telemetry_mode_loc" : mc.self_info["telemetry_mode_loc"]}))
                         else :
                             print(f"telemetry_mode_loc: {mc.self_info['telemetry_mode_loc']}")
+                    case "custom" :
+                        res = await mc.commands.get_custom_vars()
+                        logger.debug(res)
+                        if res.type == EventType.ERROR :
+                            if json_output :
+                                print(json.dumps(res))
+                            else :
+                                logger.error("Couldn't get custom variables")
+                        else :
+                            print(json.dumps(res.payload, indent=4))
                     case _ :
                         res = await mc.commands.get_custom_vars()
                         logger.debug(res)
@@ -963,7 +985,7 @@ async def next_cmd(mc, cmds, json_output=False):
                             if json_output :
                                 print(json.dumps(res))
                             else :
-                                print(f"Couldn't get custom variables")
+                                logger.error(f"Couldn't get custom variables")
                         else :
                             try:
                                 if cmds[1].startswith("_"):
