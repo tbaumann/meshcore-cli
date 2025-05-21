@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v0.8.0"
+VERSION = "v0.8.1"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1542,9 +1542,11 @@ def command_help():
     contacts / list        : gets contact list                      lc
     share_contact <ct>     : share a contact with others            sc
     export_contact <ct>    : get a contact's URI                    ec
+    import_contact <URI>   : import a contactt from its URI         ic
     remove_contact <ct>    : removes a contact from this node
     reset_path <ct>        : resets path to a contact to flood      rp
     change_path <ct> <pth> : change the path to a contact           cp
+    req_telemetry <ct>     : prints telemetry data as json          rt
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l
     logout <name>          : log out of a repeater
