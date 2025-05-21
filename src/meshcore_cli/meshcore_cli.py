@@ -1603,14 +1603,14 @@ async def main(argv):
                 if len(devices) == 0:
                     logger.error("No ble device found")
                 for d in devices :
-                    if d.name.startswith("MeshCore-"):
+                    if not d.name is None and d.name.startswith("MeshCore-"):
                         print(f"{d.address}  {d.name}") 
                 return
             case "-S" :
                 devices = await BleakScanner.discover(timeout=timeout)
                 choices = []           
                 for d in devices:      
-                    if d.name.startswith("MeshCore-"):
+                    if not d.name is None and d.name.startswith("MeshCore-"):
                         choices.append((d.address, f"{d.address}  {d.name}"))
                 if len(choices) == 0:
                     logger.error("No BLE device found, exiting")
