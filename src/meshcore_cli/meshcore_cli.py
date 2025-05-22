@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.0.0rc2"
+VERSION = "v0.8.2"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -238,6 +238,7 @@ def make_completion_dict(contacts, to=None):
             "path": contact_list,
             "reset_path" : contact_list,
             "change_path" : contact_list,
+            "change_flags" : contact_list,
             "remove_contact" : contact_list,
             "import_contact" : {"meshcore://":None},
             "login" : contact_list,
@@ -296,6 +297,7 @@ def make_completion_dict(contacts, to=None):
                 "upload_contact" : None,
                 "reset_path" : None,
                 "change_path" : None,
+                "change_flags" : None,
                 "req_telemetry" : None,
             })
 
@@ -550,6 +552,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             # same but for commands with a parameter
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
                     line.startswith("cp ") or line.startswith("change_path ") or\
+                    line.startswith("cf ") or line.startswith("change_flags ") or\
                     line.startswith("login ")) :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
@@ -1209,6 +1212,24 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(json.dumps(res.payload, indent=4))
                     await mc.commands.get_contacts()
 
+            case "change_flags" | "cf":
+                argnum = 2 
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                if contact is None:
+                    if json_output :
+                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                    else:
+                        print(f"Unknown contact {cmds[1]}")
+                else:
+                    res = await mc.commands.change_contact_flags(contact, int(cmds[2]))
+                    logger.debug(res)
+                    if res.type == EventType.ERROR:
+                        print(f"Error setting path: {res}")
+                    elif json_output :
+                        print(json.dumps(res.payload, indent=4))
+                    await mc.commands.get_contacts()
+
             case "reset_path" | "rp" :
                 argnum = 1
                 await mc.ensure_contacts()
@@ -1546,6 +1567,7 @@ def command_help():
     remove_contact <ct>    : removes a contact from this node
     reset_path <ct>        : resets path to a contact to flood      rp
     change_path <ct> <pth> : change the path to a contact           cp
+    change_flags <ct> <f>  : change contact flags (tel_l|tel_a|star)cf
     req_telemetry <ct>     : prints telemetry data as json          rt
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l

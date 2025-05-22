@@ -66,7 +66,7 @@ Commands are given after arguments, they can be chained and some have shortcuts.
   Messenging
     msg &lt;name> &lt;msg>       : send message to node by name           m  {
     wait_ack               : wait an ack                            wa }
-    chan &lt;nb> &lt;msg>        : send message to channel number <nb>    ch
+    chan &lt;nb> &lt;msg>        : send message to channel number &lt;nb>    ch
     public &lt;msg>           : send message to public channel (0)     dch
     recv                   : reads next msg                         r
     wait_msg               : wait for a message and read it         wm
@@ -85,9 +85,12 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     contacts / list        : gets contact list                      lc
     share_contact &lt;ct>     : share a contact with others            sc
     export_contact &lt;ct>    : get a contact's URI                    ec
+    import_contact &lt;URI>   : import a contactt from its URI         ic
     remove_contact &lt;ct>    : removes a contact from this node
     reset_path &lt;ct>        : resets path to a contact to flood      rp
     change_path &lt;ct> &lt;pth> : change the path to a contact           cp
+    change_flags &lt;ct> &lt;f>  : change contact flags (tel_l|tel_a|star)cf
+    req_telemetry &lt;ct>     : prints telemetry data as json          rt
   Repeaters
     login &lt;name> &lt;pwd>     : log into a node (rep) with given pwd   l
     logout &lt;name>          : log out of a repeater
