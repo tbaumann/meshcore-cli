@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v0.8.2"
+VERSION = "v0.8.3"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -263,6 +263,7 @@ def make_completion_dict(contacts, to=None):
                     "manual_add_contacts" : {"on" : None, "off":None},
                     "telemetry_mode_base" : {"always" : None, "device":None, "never":None},
                     "telemetry_mode_loc" : {"always" : None, "device":None, "never":None},
+                    "telemetry_mode_env" : {"always" : None, "device":None, "never":None},
                     },
             "get" : {"name":None, 
                      "bat":None, 
@@ -279,6 +280,7 @@ def make_completion_dict(contacts, to=None):
                      "manual_add_contacts":None,
                      "telemetry_mode_base":None,
                      "telemetry_mode_loc":None,
+                     "telemetry_mode_env":None,
                      "custom":None
                      },
         })
@@ -850,7 +852,19 @@ async def next_cmd(mc, cmds, json_output=False):
                         if res.type == EventType.ERROR:
                             print(f"Error : {res}")
                         else:
-                            print(f"telemetry mode: {mode}")
+                            print(f"telemetry mode for location: {mode}")
+                    case "telemetry_mode_env":
+                        if (cmds[2] == "2") or (cmds[2].startswith("al")) or (cmds[2] == "yes") or (cmds[2] == "on") :
+                            mode = 2
+                        elif (cmds[2] == "1") or (cmds[2] == "selected") or (cmds[2].startswith("dev")) :
+                            mode = 1
+                        else :
+                            mode = 0
+                        res = await mc.commands.set_telemetry_mode_env(mode)
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        else:
+                            print(f"telemetry mode for env: {mode}")
                     case _: # custom var
                         if cmds[1].startswith("_") :
                             vname = cmds[1][1:]
@@ -971,6 +985,12 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"telemetry_mode_loc" : mc.self_info["telemetry_mode_loc"]}))
                         else :
                             print(f"telemetry_mode_loc: {mc.self_info['telemetry_mode_loc']}")
+                    case "telemetry_mode_env" :
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"telemetry_mode_env" : mc.self_info["telemetry_mode_env"]}))
+                        else :
+                            print(f"telemetry_mode_env: {mc.self_info['telemetry_mode_env']}")
                     case "custom" :
                         res = await mc.commands.get_custom_vars()
                         logger.debug(res)
