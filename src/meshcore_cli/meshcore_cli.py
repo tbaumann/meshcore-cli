@@ -247,6 +247,8 @@ def make_completion_dict(contacts, to=None):
             "logout" : contact_list,
             "req_telemetry" : contact_list,
             "self_telemetry" : None,
+            "get_channel": None,
+            "set_channel": None,
             "set" : {
                     "name" : None, 
                     "pin" : None, 
@@ -1028,6 +1030,37 @@ async def next_cmd(mc, cmds, json_output=False):
                                 else:
                                     print(val)
 
+            case "self_telemetry" | "t":
+                res = await mc.commands.get_self_telemetry()
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while requesting telemetry")
+                elif res is None:
+                    if json_output :
+                        print(json.dumps({"error" : "Timeout waiting telemetry"}))
+                    else:
+                        print("Timeout waiting telemetry")
+                else :
+                    print(json.dumps(res.payload, indent=4))
+
+            case "get_channel":
+                argnum = 1
+                res = await mc.commands.get_channel(int(cmds[1]))
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while requesting channel info")
+                else:
+                    info = res.payload
+                    info["channel_secret"] = info["channel_secret"].hex()
+                    print(json.dumps(info))
+
+            case "set_channel":
+                argnum = 3
+                res = await mc.commands.set_channel(int(cmds[1]), cmds[2], bytes.fromhex(cmds[3]))
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while setting channel")
+
             case "reboot" :
                 res = await mc.commands.reboot()
                 logger.debug(res)
@@ -1152,19 +1185,6 @@ async def next_cmd(mc, cmds, json_output=False):
                             print("Timeout waiting status")
                     else :
                         print(json.dumps(res.payload, indent=4))
-
-            case "self_telemetry" | "t":
-                res = await mc.commands.get_self_telemetry()
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error while requesting telemetry")
-                elif res is None:
-                    if json_output :
-                        print(json.dumps({"error" : "Timeout waiting telemetry"}))
-                    else:
-                        print("Timeout waiting telemetry")
-                else :
-                    print(json.dumps(res.payload, indent=4))
 
             case "req_telemetry" | "rt" :
                 argnum = 1
@@ -1585,6 +1605,8 @@ def command_help():
     wait_msg               : wait for a message and read it         wm
     sync_msgs              : gets all unread msgs from the node     sm
     msgs_subscribe         : display msgs as they arrive            ms
+    get_channel <n>        : get info for channel n
+    set_channel n nm k     : set channel info (nb, name, key)
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
