@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.0.1"
+VERSION = "v1.0.2"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -235,6 +235,7 @@ def make_completion_dict(contacts, to=None):
             "contact_info": contact_list,
             "export_contact" : contact_list,
             "upload_contact" : contact_list,
+            "share_contact" : contact_list,
             "path": contact_list,
             "reset_path" : contact_list,
             "change_path" : contact_list,
@@ -299,6 +300,7 @@ def make_completion_dict(contacts, to=None):
                 "contact_info": None,
                 "path": None,
                 "export_contact" : None,
+                "share_contact" : None,
                 "upload_contact" : None,
                 "reset_path" : None,
                 "change_path" : None,
