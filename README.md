@@ -36,16 +36,18 @@ Arguments mostly deals with ble connection
 
 <pre>
     -h : prints this help
-    -j : json output
-    -D : print debug messages
-    -S : BLE device selector
-    -l : lists BLE devices
-    -a &lt;address&gt;    : specifies device address (can be a name)
-    -d &lt;name&gt;       : filter meshcore devices with name or address
-    -t &lt;hostname&gt;   : connects via tcp/ip
-    -p &lt;port&gt;       : specifies tcp port (default 5000)
-    -s &lt;port&gt;       : use serial port &lt;port&gt;
-    -b &lt;baudrate&gt;   : specify baudrate
+    -v : prints version
+    -j : json output (disables init file)
+    -D : debug
+    -S : performs a ble scan and ask for device
+    -l : list available ble devices and exit
+    -T &lt;timeout>    : timeout for the ble scan (-S and -l) default 2s
+    -a &lt;address>    : specifies device address (can be a name)
+    -d &lt;name>       : filter meshcore devices with name or address
+    -t &lt;hostname>   : connects via tcp/ip
+    -p &lt;port>       : specifies tcp port (default 5000)
+    -s &lt;port>       : use serial port &lt;port>
+    -b &lt;baudrate>   : specify baudrate
 </pre>
 
 ### Available Commands 
@@ -58,6 +60,7 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     chat_to &lt;ct>           : enter chat with contact                to
     script &lt;filename>      : execute commands in filename
     infos                  : print informations about the node      i
+    self_telemetry         : print own telemtry                     t
     card                   : export this node URI                   e
     ver                    : firmware version                       v
     reboot                 : reboots node
@@ -72,6 +75,8 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     wait_msg               : wait for a message and read it         wm
     sync_msgs              : gets all unread msgs from the node     sm
     msgs_subscribe         : display msgs as they arrive            ms
+    get_channel &lt;n>        : get info for channel n
+    set_channel n nm k     : set channel info (nb, name, key)
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
@@ -80,13 +85,14 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     time &lt;epoch>           : sets time to given epoch
     clock                  : get current time
     clock sync             : sync device clock                      st
-    cli                    : send a cmd to node's cli (if avail)    @
   Contacts
     contacts / list        : gets contact list                      lc
+    contact_info &lt;ct>      : prints information for contact ct      ci
     share_contact &lt;ct>     : share a contact with others            sc
     export_contact &lt;ct>    : get a contact's URI                    ec
     import_contact &lt;URI>   : import a contactt from its URI         ic
     remove_contact &lt;ct>    : removes a contact from this node
+    path &lt;ct>              : diplays path for a contact
     reset_path &lt;ct>        : resets path to a contact to flood      rp
     change_path &lt;ct> &lt;pth> : change the path to a contact           cp
     change_flags &lt;ct> &lt;f>  : change contact flags (tel_l|tel_a|star)cf

@@ -1228,15 +1228,19 @@ async def next_cmd(mc, cmds, json_output=False):
                     else:
                         print(f"Unknown contact {cmds[1]}")
                 else:
-                    res = contact["out_path"]
+                    path = contact["out_path"]
+                    path_len = contact["out_path_len"] 
                     if json_output :
                         print(json.dumps({"adv_name" : contact["adv_name"],
-                                          "out_path" : res}))
+                                          "out_path_len" : path_len,
+                                          "out_path" : path}))
                     else:
-                        if (res == "") :
+                        if (path_len == 0) :
                             print("0 hop")
+                        elif (path_len == -1) :
+                            print("Path not set")
                         else:
-                            print(res)
+                            print(path)
             
             case "contact_info" | "ci":
                 argnum = 1
@@ -1617,13 +1621,14 @@ def command_help():
     time <epoch>           : sets time to given epoch
     clock                  : get current time
     clock sync             : sync device clock                      st
-    cli                    : send a cmd to node's cli (if avail)    @
   Contacts
     contacts / list        : gets contact list                      lc
+    contact_info <ct>      : prints information for contact ct      ci
     share_contact <ct>     : share a contact with others            sc
     export_contact <ct>    : get a contact's URI                    ec
     import_contact <URI>   : import a contactt from its URI         ic
     remove_contact <ct>    : removes a contact from this node
+    path <ct>              : diplays path for a contact
     reset_path <ct>        : resets path to a contact to flood      rp
     change_path <ct> <pth> : change the path to a contact           cp
     change_flags <ct> <f>  : change contact flags (tel_l|tel_a|star)cf
