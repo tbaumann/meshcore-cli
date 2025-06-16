@@ -1626,7 +1626,7 @@ def command_help():
     contact_info <ct>      : prints information for contact ct      ci
     share_contact <ct>     : share a contact with others            sc
     export_contact <ct>    : get a contact's URI                    ec
-    import_contact <URI>   : import a contactt from its URI         ic
+    import_contact <URI>   : import a contact from its URI          ic
     remove_contact <ct>    : removes a contact from this node
     path <ct>              : diplays path for a contact
     reset_path <ct>        : resets path to a contact to flood      rp

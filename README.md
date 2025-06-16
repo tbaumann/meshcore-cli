@@ -90,7 +90,7 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     contact_info &lt;ct>      : prints information for contact ct      ci
     share_contact &lt;ct>     : share a contact with others            sc
     export_contact &lt;ct>    : get a contact's URI                    ec
-    import_contact &lt;URI>   : import a contactt from its URI         ic
+    import_contact &lt;URI>   : import a contact from its URI          ic
     remove_contact &lt;ct>    : removes a contact from this node
     path &lt;ct>              : diplays path for a contact
     reset_path &lt;ct>        : resets path to a contact to flood      rp
