@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.0.2"
+VERSION = "v1.0.3"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -271,6 +271,7 @@ def make_completion_dict(contacts, to=None):
                     },
             "get" : {"name":None, 
                      "bat":None, 
+                     "fstats": None,
                      "radio":None, 
                      "tx":None, 
                      "coords":None, 
@@ -890,6 +891,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         print("""Gets parameters from node
     name      : node name
     bat       : battery level in mV
+    fstats    : fs statistics
     coords    : adv coordinates
     lat       : latitude
     lon       : longitude
@@ -972,6 +974,15 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps(res.payload, indent=4))
                         else:
                             print(f"Battery level : {res.payload['level']}")
+                    case "fstats" :
+                        res = await mc.commands.get_bat()
+                        logger.debug(res)
+                        if res.type == EventType.ERROR or not "used_kb" in res.payload:
+                            print(f"Error getting fs stats {res}")
+                        elif json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            print(f"Using {res.payload['used_kb']}kB of {res.payload['total_kb']}kB")
                     case "manual_add_contacts" :
                         await mc.commands.send_appstart()
                         if json_output :
