@@ -272,6 +272,7 @@ def make_completion_dict(contacts, to=None):
                     "telemetry_mode_base" : {"always" : None, "device":None, "never":None},
                     "telemetry_mode_loc" : {"always" : None, "device":None, "never":None},
                     "telemetry_mode_env" : {"always" : None, "device":None, "never":None},
+                    "advert_loc_policy" : {"none" : None, "share" : None},
                     },
             "get" : {"name":None, 
                      "bat":None, 
@@ -290,6 +291,7 @@ def make_completion_dict(contacts, to=None):
                      "telemetry_mode_base":None,
                      "telemetry_mode_loc":None,
                      "telemetry_mode_env":None,
+                     "advert_loc_policy":None,
                      "custom":None
                      },
         })
@@ -879,6 +881,17 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(f"Error : {res}")
                         else:
                             print(f"telemetry mode for env: {mode}")
+                    case "advert_loc_policy":
+                        if (cmds[2] == "1") or (cmds[2] == "share") :
+                            policy = 1
+                        else :
+                            policy = 0
+                        res = await mc.commands.set_advert_loc_policy(policy)
+                        if res.type == EventType.ERROR:
+                            print(f"Error : {res}")
+                        else:
+                            print(f"Policy for adv_loc: {policy}")
+
                     case _: # custom var
                         if cmds[1].startswith("_") :
                             vname = cmds[1][1:]
@@ -1015,6 +1028,12 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"telemetry_mode_env" : mc.self_info["telemetry_mode_env"]}))
                         else :
                             print(f"telemetry_mode_env: {mc.self_info['telemetry_mode_env']}")
+                    case "advert_loc_policy" :
+                        await mc.commands.send_appstart()
+                        if json_output :
+                            print(json.dumps({"advert_loc_policy" : mc.self_info["adv_loc_policy"]}))
+                        else :
+                            print(f"advert_loc_policy: {mc.self_info['adv_loc_policy']}")
                     case "custom" :
                         res = await mc.commands.get_custom_vars()
                         logger.debug(res)
