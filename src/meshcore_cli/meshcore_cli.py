@@ -59,8 +59,8 @@ ANSI_LIGHT_GREEN = "\033[0;92m"
 ANSI_LIGHT_YELLOW = "\033[0;93m"
 ANSI_LIGHT_GRAY="\033[0;38;5;247m"
 ANSI_BGRAY="\033[1;38;5;247m"
-ANSI_ORANGE="\033[0;38;5;208m"
-ANSI_BORANGE="\033[1;38;5;208m"
+ANSI_ORANGE="\033[0;38;5;214m"
+ANSI_BORANGE="\033[1;38;5;214m"
 
 def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
@@ -120,7 +120,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
             if ct is None: # Unknown
                 disp = f"{ANSI_RED}"
             elif ct["type"] == 4 : # sensor
-                disp = f"{ANSI_ORANGE}"
+                disp = f"{ANSI_YELLOW}"
             elif ct["type"] == 3 : # room
                 disp = f"{ANSI_CYAN}"
             elif ct["type"] == 2 : # repeater
@@ -134,7 +134,7 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
                     disp = disp + f"/{ANSI_RED}{data['signature']}"
                 else:
                     disp = disp + f"/{ANSI_BLUE}{sender['adv_name']}"
-            disp = disp + f" {ANSI_YELLOW}({path_str})"
+            disp = disp + f" {ANSI_ORANGE}({path_str})"
             if data["txt_type"] == 1:
                 disp = disp + f"{ANSI_LIGHT_GRAY}"
             else:
@@ -446,7 +446,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     if classic :
                         prompt = prompt + "!"
                 elif contact["type"] == 4 : # sensor
-                    prompt = prompt + f"{ANSI_BORANGE}"
+                    prompt = prompt + f"{ANSI_BYELLOW}"
                 elif contact["type"] == 3 : # room server
                     prompt = prompt + f"{ANSI_BCYAN}"
                 elif contact["type"] == 2 :
