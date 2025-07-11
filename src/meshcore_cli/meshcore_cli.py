@@ -176,6 +176,54 @@ process_event_message.print_snr=False
 process_event_message.color=True
 process_event_message.last_node=None
 
+async def handle_advert(event):
+    if not handle_advert.print_adverts:
+        return
+
+    if handle_advert.json_output:
+        msg = json.dumps({"event": "advert", "public_key" : event.payload["public_key"]})
+    else:
+        key = event.payload["public_key"]
+        contact = handle_advert.mc.get_contact_by_key_prefix(key)
+        name = "<Unknown Contact>"
+
+        if not contact is None :
+            name = contact["adv_name"]
+
+        msg = f"Got advert from {name} [{key}]"
+
+    if handle_message.above:
+        print_above(msg)
+    else :
+        print(msg)
+handle_advert.print_adverts=False
+handle_advert.mc=None
+handle_advert.json_output=False
+
+async def handle_path_update(event):
+    if not handle_path_update.print_path_updates:
+        return
+
+    if handle_path_update.json_output:
+        msg = json.dumps({"event": "path_update", "public_key" : event.payload["public_key"]})
+    else:
+        key = event.payload["public_key"]
+        contact = handle_path_update.mc.get_contact_by_key_prefix(key)
+        name = "<Unknown Contact>"
+
+        if not contact is None :
+            name = contact["adv_name"]
+
+        msg = f"Got path update for {name} [{key}]"
+
+    if handle_message.above:
+        print_above(msg)
+    else :
+        print(msg)
+handle_path_update.print_path_updates=False
+handle_path_update.mc=None
+handle_path_update.json_output=False
+
 async def handle_message(event):
     """ Process incoming message events """
     await process_event_message(handle_message.mc, event,  
@@ -269,6 +317,8 @@ def make_completion_dict(contacts, to=None):
                     "json_msgs" : {"on":None, "off": None},
                     "color" : {"on":None, "off":None},
                     "print_name" : {"on":None, "off":None},
+                    "print_adverts" : {"on":None, "off":None},
+                    "print_path_updates" : {"on":None,"off":None},
                     "classic_prompt" : {"on" : None, "off":None},
                     "manual_add_contacts" : {"on" : None, "off":None},
                     "telemetry_mode_base" : {"always" : None, "device":None, "never":None},
@@ -288,6 +338,8 @@ def make_completion_dict(contacts, to=None):
                      "json_msgs":None, 
                      "color":None,
                      "print_name":None, 
+                     "print_adverts":None, 
+                     "print_path_updates":None, 
                      "classic_prompt":None,
                      "manual_add_contacts":None,
                      "telemetry_mode_base":None,
@@ -746,6 +798,14 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "print_snr" :
                         process_event_message.print_snr = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
+                    case "print_adverts" :
+                        handle_advert.print_adverts = (cmds[2] == "on")
+                        if json_output :
+                            print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
+                    case "print_path_updates" :
+                        handle_path_update.print_path_updates = (cmds[2] == "on")
                         if json_output :
                             print(json.dumps({"cmd" : cmds[1], "param" : cmds[2]}))
                     case "json_msgs" :
@@ -1260,7 +1320,7 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "path":
                 argnum = 1
-                res = await mc.ensure_contacts()
+                res = await mc.ensure_contacts(follow=True)
                 contact = mc.get_contact_by_name(cmds[1])
                 if contact is None:
                     if json_output :
@@ -1284,7 +1344,7 @@ async def next_cmd(mc, cmds, json_output=False):
             
             case "contact_info" | "ci":
                 argnum = 1
-                res = await mc.ensure_contacts()
+                res = await mc.ensure_contacts(follow=True)
                 contact = mc.get_contact_by_name(cmds[1])
                 if contact is None:
                     if json_output :
@@ -1310,7 +1370,6 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(f"Error setting path: {res}")
                     elif json_output :
                         print(json.dumps(res.payload, indent=4))
-                    await mc.commands.get_contacts()
 
             case "change_flags" | "cf":
                 argnum = 2 
@@ -1328,7 +1387,6 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(f"Error setting path: {res}")
                     elif json_output :
                         print(json.dumps(res.payload, indent=4))
-                    await mc.commands.get_contacts()
 
             case "reset_path" | "rp" :
                 argnum = 1
@@ -1344,9 +1402,11 @@ async def next_cmd(mc, cmds, json_output=False):
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error resetting path: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    await mc.commands.get_contacts()
+                    else:
+                        if json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        contact["out_path"] = ""
+                        contact["out_path_len"] = -1
 
             case "share_contact" | "sc":
                 argnum = 1
@@ -1379,10 +1439,11 @@ async def next_cmd(mc, cmds, json_output=False):
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error exporting contact: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload))
-                    else :
-                        print(res.payload['uri'])
+                    else:
+                        if json_output :
+                            print(json.dumps(res.payload))
+                        else :
+                            print(res.payload['uri'])
 
             case "import_contact"|"ic":
                 argnum = 1
@@ -1392,7 +1453,8 @@ async def next_cmd(mc, cmds, json_output=False):
                     if res.type == EventType.ERROR:
                         print(f"Error while importing contact: {res}")
                     else:
-                        logger.info("Contact successfully added, refresh with lc")
+                        logger.info("Contact successfully added")
+                        await mc.commands.get_contacts()
 
             case "upload_contact" | "uc" :
                 argnum = 1
@@ -1453,8 +1515,10 @@ async def next_cmd(mc, cmds, json_output=False):
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error removing contact: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
+                    else:
+                        if json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        await mc.commands.get_contacts()
 
             case "recv" | "r" :
                 res = await mc.commands.get_msg()
@@ -1738,6 +1802,8 @@ async def main(argv):
             case "-j" :
                 json_output=True
                 handle_message.json_output=True
+                handle_advert.json_output=True
+                handle_path_update.json_output=True
             case "-D" :
                 debug=True
             case "-h" :
@@ -1812,6 +1878,11 @@ async def main(argv):
                 f.write(address)
 
     handle_message.mc = mc # connect meshcore to handle_message
+    handle_advert.mc = mc
+    handle_path_update.mc = mc
+
+    mc.subscribe(EventType.ADVERTISEMENT, handle_advert)
+    mc.subscribe(EventType.PATH_UPDATE, handle_path_update)
 
     res = await mc.commands.send_device_query()
     if res.type == EventType.ERROR :
