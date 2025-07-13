@@ -311,6 +311,7 @@ def make_completion_dict(contacts, pending={}, to=None):
             "contacts": None,
             "pending_contacts": None,
             "add_pending": pending_list,
+            "flush_pending": None,
             "contact_info": contact_list,
             "export_contact" : contact_list,
             "upload_contact" : contact_list,
@@ -1379,9 +1380,12 @@ async def next_cmd(mc, cmds, json_output=False):
                     for c in mc.pending_contacts.items():
                         print(f"{c[1]["adv_name"]}: {c[1]["public_key"]}")
 
+            case "flush_pending":
+                mc.flush_pending_contacts()
+
             case "add_pending":
                 argnum = 1
-                contact = mc.pending_contacts.pop(cmds[1], None)
+                contact = mc.pop_pending_contact(cmds[1])
                 if contact is None:
                     if json_output:
                         print(json.dumps({"error":"Contact does not exist"}))
@@ -1818,6 +1822,7 @@ def command_help():
     req_telemetry <ct>     : prints telemetry data as json          rt
     pending_contacts       : show pending contacts
     add_pending <key>      : manually add pending contact from key
+    flush_pending          : flush pending contact clist
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l
     logout <name>          : log out of a repeater
