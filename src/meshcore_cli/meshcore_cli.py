@@ -180,7 +180,7 @@ async def handle_advert(event):
     if not handle_advert.print_adverts:
         return
 
-    if handle_advert.json_output:
+    if handle_message.json_output:
         msg = json.dumps({"event": "advert", "public_key" : event.payload["public_key"]})
     else:
         key = event.payload["public_key"]
@@ -198,7 +198,6 @@ async def handle_advert(event):
         print(msg)
 handle_advert.print_adverts=False
 handle_advert.mc=None
-handle_advert.json_output=False
 
 async def handle_path_update(event):
     if not handle_path_update.print_path_updates:
