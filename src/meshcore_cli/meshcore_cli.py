@@ -10,6 +10,7 @@ import logging
 import requests
 from bleak import BleakScanner
 from pathlib import Path
+import traceback
 from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.shortcuts import CompleteStyle
 from prompt_toolkit.completion import NestedCompleter
@@ -655,6 +656,11 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line.startswith("login ")) :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
+                await process_cmds(mc, args)
+
+            elif contact["type"] > 3 and (line.startswith("req_amm ")) :
+                cmds = line.split(" ", 3)
+                args = [cmds[0], contact['adv_name'], cmds[1], cmds[2]]
                 await process_cmds(mc, args)
 
             elif line.startswith(":") : # : will send a command to current recipient
@@ -1361,6 +1367,32 @@ async def next_cmd(mc, cmds, json_output=False):
                     else :
                         print(json.dumps(res.payload, indent=4))
 
+            case "req_tele2" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.binary.req_telemetry(contact)
+                if res is None :
+                    if json_output :
+                        print(json.dumps({"error" : "Getting data"}))
+                    else:
+                        print("Error getting data")
+                else :
+                    print(json.dumps(res))
+
+            case "req_amm" :
+                argnum = 3
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.binary.req_amm(contact, int(cmds[2]), int(cmds[3]))
+                if res is None :
+                    if json_output :
+                        print(json.dumps({"error" : "Getting data"}))
+                    else:
+                        print("Error getting data")
+                else :
+                    print(json.dumps(res, indent=4))
+
             case "req_binary" :
                 argnum = 2
                 await mc.ensure_contacts()
@@ -1373,7 +1405,6 @@ async def next_cmd(mc, cmds, json_output=False):
                         print("Error getting binary data")
                 else :
                     print(json.dumps(res))
-
 
             case "contacts" | "list" | "lc":
                 await mc.ensure_contacts(follow=True)
@@ -1988,6 +2019,7 @@ def cli():
         print("\nExited cleanly")
     except Exception as e:
         print(f"Error: {e}")
+        traceback.print_exc()
 
 if __name__ == '__main__':
     cli()
