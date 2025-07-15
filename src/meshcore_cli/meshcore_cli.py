@@ -1464,7 +1464,7 @@ async def next_cmd(mc, cmds, json_output=False):
                     print(json.dumps(mc.pending_contacts, indent=4))
                 else:
                     for c in mc.pending_contacts.items():
-                        print(f"{c[1]["adv_name"]}: {c[1]["public_key"]}")
+                        print(f"{c[1]['adv_name']}: {c[1]['public_key']}")
 
             case "flush_pending":
                 mc.flush_pending_contacts()
