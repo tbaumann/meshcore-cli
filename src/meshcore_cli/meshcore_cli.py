@@ -328,6 +328,7 @@ def make_completion_dict(contacts, pending={}, to=None):
             "logout" : contact_list,
             "req_telemetry" : contact_list,
             "req_binary" : contact_list,
+            "req_mma" : contact_list,
             "self_telemetry" : None,
             "get_channel": None,
             "set_channel": None,
@@ -451,6 +452,11 @@ def make_completion_dict(contacts, pending={}, to=None):
                          },
                 "erase": None,
                 "log" : {"start" : None, "stop" : None, "erase" : None}
+            })
+
+        if (to['type'] == 4) : #sensors
+            completion_list.update({
+                "req_mma":{"begin end":None}
             })
 
     completion_list.update({
@@ -658,7 +664,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
 
-            elif contact["type"] > 3 and (line.startswith("req_amm ")) :
+            elif contact["type"] > 3 and (line.startswith("req_mma ")) :
                 cmds = line.split(" ", 3)
                 args = [cmds[0], contact['adv_name'], cmds[1], cmds[2]]
                 await process_cmds(mc, args)
@@ -1380,11 +1386,11 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     print(json.dumps(res))
 
-            case "req_amm" :
+            case "req_mma" :
                 argnum = 3
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.binary.req_amm(contact, int(cmds[2]), int(cmds[3]))
+                res = await mc.commands.binary.req_mma(contact, int(cmds[2]), int(cmds[3]))
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
