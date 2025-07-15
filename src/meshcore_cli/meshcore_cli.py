@@ -22,7 +22,7 @@ from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.0"
+VERSION = "v1.1.1"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -326,6 +326,7 @@ def make_completion_dict(contacts, pending={}, to=None):
             "req_status" : contact_list,
             "logout" : contact_list,
             "req_telemetry" : contact_list,
+            "req_binary" : contact_list,
             "self_telemetry" : None,
             "get_channel": None,
             "set_channel": None,
@@ -394,6 +395,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "change_path" : None,
                 "change_flags" : None,
                 "req_telemetry" : None,
+                "req_binary" : None,
             })
 
         if to['type'] > 1 : # repeaters and room servers
@@ -451,7 +453,6 @@ def make_completion_dict(contacts, pending={}, to=None):
             })
 
     completion_list.update({
-        "cli" : None,
         "script" : None,
         "quit" : None
     })
@@ -576,10 +577,6 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = shlex.split(line[1:])
                 await process_cmds(mc, args)
 
-            elif line.startswith("@") : # send a cli command that won't need quotes !
-                args=["cli", line[1:]]
-                await process_cmds(mc, args)
-
             elif line.startswith("to ") : # dest
                 dest = line[3:]
                 if dest.startswith("\"") or dest.startswith("\'") : # if name starts with a quote
@@ -615,7 +612,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 break
 
             # commands that take one parameter (don't need quotes)
-            elif line.startswith("public ") or line.startswith("cli ") :
+            elif line.startswith("public ") :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], cmds[1]]
                 await process_cmds(mc, args)
@@ -654,6 +651,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
                     line.startswith("cp ") or line.startswith("change_path ") or\
                     line.startswith("cf ") or line.startswith("change_flags ") or\
+                    line.startswith("req_binary ") or\
                     line.startswith("login ")) :
                 cmds = line.split(" ", 1)
                 args = [cmds[0], contact['adv_name'], cmds[1]]
@@ -1363,6 +1361,18 @@ async def next_cmd(mc, cmds, json_output=False):
                     else :
                         print(json.dumps(res.payload, indent=4))
 
+            case "req_binary" :
+                argnum = 2
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.send_binary_req(contact, bytes.fromhex(cmds[2]))
+                logger.info(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while requesting telemetry")
+                else:
+                    res2 = await mc.wait_for_event(EventType.BINARY_RESPONSE)
+                    logger.info(res2)
+
             case "contacts" | "list" | "lc":
                 await mc.ensure_contacts(follow=True)
                 res = mc.contacts
@@ -1715,36 +1725,14 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 1
                 await process_script(mc, cmds[1], json_output=json_output)
 
-            case "cli" | "@" :
-                argnum = 1
-                res = await mc.commands.send_cli(cmds[1])
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error sending cli cmd: {res}")
-                elif json_output :
-                    print(json.dumps(res.payload, indent=4))
-                else:
-                    print(f"{res.payload['response']}")
-
             case _ :
-                if cmd[0] == "@" :
-                    res = await mc.commands.send_cli(cmd[1:])
-                    logger.debug(res)
-                    if res.type == EventType.ERROR:
-                        print(f"Error sending cli cmd: {res}")
-                    elif json_output :
-                        print(json.dumps(res.payload, indent=4))
-                    else:
-                        print(f"{res.payload['response']}")
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[0])
+                if contact is None:
+                    logger.error(f"Unknown command : {cmd}, will exit ...")
+                    return None
 
-                else :
-                    await mc.ensure_contacts()
-                    contact = mc.get_contact_by_name(cmds[0])
-                    if contact is None:
-                        logger.error(f"Unknown command : {cmd}, will exit ...")
-                        return None
-
-                    await interactive_loop(mc, to=contact)
+                await interactive_loop(mc, to=contact)
 
         logger.debug(f"cmd {cmds[0:argnum+1]} processed ...")
         return cmds[argnum+1:]
