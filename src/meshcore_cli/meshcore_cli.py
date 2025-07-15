@@ -1365,13 +1365,15 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 2
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.send_binary_req(contact, bytes.fromhex(cmds[2]))
-                logger.info(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error while requesting telemetry")
-                else:
-                    res2 = await mc.wait_for_event(EventType.BINARY_RESPONSE)
-                    logger.info(res2)
+                res = await mc.commands.binary.req_binary(contact, bytes.fromhex(cmds[2]))
+                if res is None :
+                    if json_output :
+                        print(json.dumps({"error" : "Getting binary data"}))
+                    else:
+                        print("Error getting binary data")
+                else :
+                    print(json.dumps(res))
+
 
             case "contacts" | "list" | "lc":
                 await mc.ensure_contacts(follow=True)
