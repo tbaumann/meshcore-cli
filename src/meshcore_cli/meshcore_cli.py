@@ -432,6 +432,8 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "public.key":None,
                          "lat" : None,
                          "lon" : None,
+                         "telemetry" : None,
+                         "status" : None
                          },
                 "set" : {"name" : None,
                          "radio" : {",,,":None, "f,bw,sf,cr": None},
@@ -456,7 +458,13 @@ def make_completion_dict(contacts, pending={}, to=None):
 
         if (to['type'] == 4) : #sensors
             completion_list.update({
-                "req_mma":{"begin end":None}
+                "req_mma":{"begin end":None},
+                "req_acl":None
+            })
+
+            completion_list["get"].update({
+                "mma":None,
+                "acl":None,
             })
 
     completion_list.update({
@@ -654,6 +662,18 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [line, contact['adv_name']]
                 await process_cmds(mc, args)
 
+            elif contact["type"] == 4 and\
+                    (line == "get acl" or line.startswith("get mma ")) or\
+                    contact["type"] > 1 and\
+                    (line.startswith("get telemetry") or line.startswith("get status")):
+                cmds = line.split(" ")
+                args = [f"req_{cmds[1]}", contact['adv_name']]
+                if len(cmds) > 2 :
+                    args = args + cmds[2:]
+                if line.startswith("get mma ") and len(args) < 4:
+                    args.append("0")
+                await process_cmds(mc, args)
+
             # same but for commands with a parameter
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
                     line.startswith("cp ") or line.startswith("change_path ") or\
@@ -664,8 +684,10 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
 
-            elif contact["type"] > 3 and (line.startswith("req_mma ")) :
-                cmds = line.split(" ", 3)
+            elif contact["type"] == 4 and (line.startswith("req_mma ")) :
+                cmds = line.split(" ")
+                if len(cmds) < 3 :
+                    cmds.append("0")
                 args = [cmds[0], contact['adv_name'], cmds[1], cmds[2]]
                 await process_cmds(mc, args)
 
@@ -1390,7 +1412,23 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 3
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.binary.req_mma(contact, int(cmds[2]), int(cmds[3]))
+                if cmds[2][-1] == "s":
+                    from_secs = int(cmds[2][0:-1])
+                elif cmds[2][-1] == "m":
+                    from_secs = int(cmds[2][0:-1]) * 60
+                elif cmds[2][-1] == "h":
+                    from_secs = int(cmds[2][0:-1]) * 3600
+                else :
+                    from_secs = int(cmds[2]) * 60 # same as tdeck
+                if cmds[3][-1] == "s":
+                    to_secs = int(cmds[3][0:-1])
+                elif cmds[3][-1] == "m":
+                    to_secs = int(cmds[3][0:-1]) * 60
+                elif cmds[3][-1] == "h":
+                    to_secs = int(cmds[3][0:-1]) * 3600
+                else :
+                    to_secs = int(cmds[3]) * 60
+                res = await mc.commands.binary.req_mma(contact, from_secs, to_secs)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
