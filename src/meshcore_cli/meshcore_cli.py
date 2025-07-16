@@ -19,7 +19,6 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import radiolist_dialog
 
-from meshcore import TCPConnection, BLEConnection, SerialConnection
 from meshcore import MeshCore, EventType, logger
 
 # Version
@@ -459,12 +458,17 @@ def make_completion_dict(contacts, pending={}, to=None):
         if (to['type'] == 4) : #sensors
             completion_list.update({
                 "req_mma":{"begin end":None},
-                "req_acl":None
+                "req_acl":None,
+                "setperm":contact_list,
             })
 
             completion_list["get"].update({
                 "mma":None,
                 "acl":None,
+            })
+
+            completion_list["set"].update({
+                "perm":contact_list,
             })
 
     completion_list.update({
@@ -657,6 +661,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line == "contact_info" or line == "ci" or\
                     line == "req_status" or line == "rs" or\
                     line == "req_telemetry" or line == "rt" or\
+                    line == "req_acl" or\
                     line == "path" or\
                     line == "logout" ) :
                 args = [line, contact['adv_name']]
@@ -674,6 +679,26 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     args.append("0")
                 await process_cmds(mc, args)
 
+            # special treatment for setperm to support contact name as param
+            elif contact["type"] == 4 and\
+                (line.startswith("setperm ") or line.startswith("set perm ")):
+                cmds = shlex.split(line)
+                off = 1 if line.startswith("set perm") else 0
+                name = cmds[1 + off]
+                perm = int(cmds[2 + off],0)
+                ct=mc.get_contact_by_name(name)
+                if ct is None:
+                    ct=mc.get_contact_by_key_prefix(name)
+                if ct is None:
+                    if name == "self" or mc.self_info["public_key"].startswith(name):
+                        key = mc.self_info["public_key"]
+                    else:
+                        key = name
+                else:
+                    key=ct["public_key"]
+                newline=f"setperm {key} {perm}"
+                await process_cmds(mc, ["cmd", contact["adv_name"], newline])
+                
             # same but for commands with a parameter
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
                     line.startswith("cp ") or line.startswith("change_path ") or\
@@ -1436,6 +1461,32 @@ async def next_cmd(mc, cmds, json_output=False):
                         print("Error getting data")
                 else :
                     print(json.dumps(res, indent=4))
+
+            case "req_acl" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.binary.req_acl(contact)
+                if res is None :
+                    if json_output :
+                        print(json.dumps({"error" : "Getting data"}))
+                    else:
+                        print("Error getting data")
+                else :
+                    if json_output:
+                        print(json.dumps(res, indent=4))
+                    else:
+                        for e in res:
+                            name = e['key']
+                            ct = mc.get_contact_by_key_prefix(e['key'])
+                            if ct is None:
+                                if mc.self_info["public_key"].startswith(e['key']):
+                                    name = f"{'self':<20} [{e['key']}]"
+                            else:
+                                name = f"{ct['adv_name']:<20} [{e['key']}]"
+                            print(f"{name:{' '}<35}: {e['perm']:02x}")
+                            
+                                
 
             case "req_binary" :
                 argnum = 2
