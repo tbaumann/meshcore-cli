@@ -22,7 +22,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.2"
+VERSION = "v1.1.3"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -399,6 +399,16 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "req_binary" : None,
             })
 
+        if to['type'] == 1 :
+            completion_list.update({
+                "get" : {
+                    "timeout":None,
+                },
+                "set" : {
+                    "timeout":None,
+                },
+            })
+
         if to['type'] > 1 : # repeaters and room servers
             completion_list.update({
                 "login" : None,
@@ -432,7 +442,8 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "lat" : None,
                          "lon" : None,
                          "telemetry" : None,
-                         "status" : None
+                         "status" : None,
+                         "timeout" : None,
                          },
                 "set" : {"name" : None,
                          "radio" : {",,,":None, "f,bw,sf,cr": None},
@@ -450,6 +461,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "direct.txdelay" : None,
                          "lat" : None,
                          "lon" : None,
+                         "timeout" : None,
                          },
                 "erase": None,
                 "log" : {"start" : None, "stop" : None, "erase" : None}
@@ -667,6 +679,13 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [line, contact['adv_name']]
                 await process_cmds(mc, args)
 
+            elif contact["type"] > 0 and line.startswith("set timeout "):
+                cmds=line.split(" ")
+                contact["timeout"] = float(cmds[2])
+
+            elif contact["type"] > 0 and line == "get timeout":
+                print(f"timeout: {0 if not 'timeout' in contact else contact['timeout']}")
+
             elif contact["type"] == 4 and\
                     (line == "get acl" or line.startswith("get mma ")) or\
                     contact["type"] > 1 and\
@@ -767,7 +786,8 @@ async def msg_ack (mc, contact, msg) :
         return False
 
     exp_ack = result.payload["expected_ack"].hex()
-    res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=5)
+    timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact else contact["timeout"]
+    res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=timeout)
     if res is None :
         return False
 
@@ -1354,7 +1374,8 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print(f"Error while loging: {res}")
                     else: # should probably wait for the good ack
-                        res = await mc.wait_for_event(EventType.LOGIN_SUCCESS)
+                        timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                        res = await mc.wait_for_event(EventType.LOGIN_SUCCESS, timeout=timeout)
                         logger.debug(res)
                         if res is None:
                             print("Login failed : Timeout waiting response")
@@ -1382,6 +1403,12 @@ async def next_cmd(mc, cmds, json_output=False):
                 else:
                     print("Logout ok")
 
+            case "timeout_for_contact" :
+                argnum = 2
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                contact["timeout"] = float(cmds[2])
+
             case "req_status" | "rs" :
                 argnum = 1
                 await mc.ensure_contacts()
@@ -1391,7 +1418,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting status: {res}")
                 else :
-                    res = await mc.wait_for_event(EventType.STATUS_RESPONSE)
+                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                    res = await mc.wait_for_event(EventType.STATUS_RESPONSE, timeout=timeout)
                     logger.debug(res)
                     if res is None:
                         if json_output :
@@ -1410,7 +1438,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting telemetry")
                 else:
-                    res = await mc.wait_for_event(EventType.TELEMETRY_RESPONSE)
+                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                    res = await mc.wait_for_event(EventType.TELEMETRY_RESPONSE, timeout=timeout)
                     logger.debug(res)
                     if res is None:
                         if json_output :
@@ -1424,7 +1453,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 1
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.binary.req_telemetry(contact)
+                timeout = 0 if not "timeout" in contact else contact["timeout"]
+                res = await mc.commands.binary.req_telemetry(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1453,7 +1483,8 @@ async def next_cmd(mc, cmds, json_output=False):
                     to_secs = int(cmds[3][0:-1]) * 3600
                 else :
                     to_secs = int(cmds[3]) * 60
-                res = await mc.commands.binary.req_mma(contact, from_secs, to_secs)
+                timeout = 0 if not "timeout" in contact else contact["timeout"]
+                res = await mc.commands.binary.req_mma(contact, from_secs, to_secs, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1466,7 +1497,8 @@ async def next_cmd(mc, cmds, json_output=False):
                 argnum = 1
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.binary.req_acl(contact)
+                timeout = 0 if not "timeout" in contact else contact["timeout"]
+                res = await mc.commands.binary.req_acl(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1485,14 +1517,13 @@ async def next_cmd(mc, cmds, json_output=False):
                             else:
                                 name = f"{ct['adv_name']:<20} [{e['key']}]"
                             print(f"{name:{' '}<35}: {e['perm']:02x}")
-                            
-                                
 
             case "req_binary" :
                 argnum = 2
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
-                res = await mc.commands.binary.req_binary(contact, bytes.fromhex(cmds[2]))
+                timeout = 0 if not "timeout" in contact else contact["timeout"]
+                res = await mc.commands.binary.req_binary(contact, bytes.fromhex(cmds[2]), timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting binary data"}))
