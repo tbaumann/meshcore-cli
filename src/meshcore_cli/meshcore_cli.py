@@ -353,6 +353,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                     "telemetry_mode_loc" : {"always" : None, "device":None, "never":None},
                     "telemetry_mode_env" : {"always" : None, "device":None, "never":None},
                     "advert_loc_policy" : {"none" : None, "share" : None},
+                    "auto_update_contacts" : {"on":None, "off":None},
                     },
             "get" : {"name":None,
                      "bat":None,
@@ -375,6 +376,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                      "telemetry_mode_loc":None,
                      "telemetry_mode_env":None,
                      "advert_loc_policy":None,
+                     "auto_update_contacts":None,
                      "custom":None
                      },
         })
@@ -1022,6 +1024,9 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(f"Error : {res}")
                         else :
                             print(f"manual add contact: {mac}")
+                    case "auto_update_contacts":
+                        auc = (cmds[2] == "on") or (cmds[2] == "true") or (cmds[2] == "yes") or (cmds[2] == "1")
+                        mc.auto_update_contacts=auc
                     case "telemetry_mode_base":
                         if (cmds[2] == "2") or (cmds[2] == "all") or (cmds[2] == "yes") or (cmds[2] == "on") :
                             mode = 2
@@ -1229,6 +1234,11 @@ async def next_cmd(mc, cmds, json_output=False):
                             print(json.dumps({"advert_loc_policy" : mc.self_info["adv_loc_policy"]}))
                         else :
                             print(f"advert_loc_policy: {mc.self_info['adv_loc_policy']}")
+                    case "auto_update_contacts" :
+                        if json_output :
+                            print(json.dumps({"auto_update_contacts" : mc.auto_update_contacts}))
+                        else :
+                            print(f"auto_update_contacts: {"on" if mc.auto_update_contacts else "off"}")
                     case "custom" :
                         res = await mc.commands.get_custom_vars()
                         logger.debug(res)
