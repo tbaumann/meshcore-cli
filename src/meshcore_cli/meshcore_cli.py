@@ -2084,7 +2084,7 @@ async def main(argv):
 
                 result = await radiolist_dialog(
                     title="MeshCore-cli device selector",
-                    text="Chose the device to connect to :",
+                    text="Choose the device to connect to :",
                     values=choices
                 ).run_async()
 
