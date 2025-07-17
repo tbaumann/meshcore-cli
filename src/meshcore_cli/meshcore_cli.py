@@ -2065,7 +2065,6 @@ async def main(argv):
                         print(f" {d.address}  {d.name}")
                 print("\nSerial ports:")
                 ports = serial.tools.list_ports.comports()
-
                 for port, desc, hwid in sorted(ports):
                     print(f" {port:<18} {desc} [{hwid}]")
                 return
@@ -2074,13 +2073,17 @@ async def main(argv):
                 choices = []
                 for d in devices:
                     if not d.name is None and d.name.startswith("MeshCore-"):
-                        choices.append((d.address, f"{d.address}  {d.name}"))
+                        choices.append(({"type":"ble","address":d.address}, f"{d.address:<22} {d.name}"))
+
+                ports = serial.tools.list_ports.comports()
+                for port, desc, hwid in sorted(ports):
+                    choices.append(({"type":"serial","port":port}, f"{port:<22} {desc}"))
                 if len(choices) == 0:
-                    logger.error("No BLE device found, exiting")
+                    logger.error("No device found, exiting")
                     return
 
                 result = await radiolist_dialog(
-                    title="MeshCore-cli BLE device selector",
+                    title="MeshCore-cli device selector",
                     text="Chose the device to connect to :",
                     values=choices
                 ).run_async()
@@ -2089,7 +2092,14 @@ async def main(argv):
                     logger.info("No choice made, exiting")
                     return
 
-                address = result
+                if result["type"] == "ble":
+                    address = result["address"]
+                elif result["type"] == "serial":
+                    serial_port = result["port"]
+                else:
+                    logger.error("Invalid choice")
+                    return
+                    
 
     if (debug==True):
         logger.setLevel(logging.DEBUG)
