@@ -9,6 +9,7 @@ import getopt, json, shlex, re
 import logging
 import requests
 from bleak import BleakScanner
+import serial.tools.list_ports
 from pathlib import Path
 import traceback
 from prompt_toolkit.shortcuts import PromptSession
@@ -2055,12 +2056,18 @@ async def main(argv):
                 version()
                 return
             case "-l" :
+                print("BLE devices:")
                 devices = await BleakScanner.discover(timeout=timeout)
                 if len(devices) == 0:
-                    logger.error("No ble device found")
+                    logger.error(" No ble device found")
                 for d in devices :
                     if not d.name is None and d.name.startswith("MeshCore-"):
-                        print(f"{d.address}  {d.name}")
+                        print(f" {d.address}  {d.name}")
+                print("\nSerial ports:")
+                ports = serial.tools.list_ports.comports()
+
+                for port, desc, hwid in sorted(ports):
+                    print(f" {port:<18} {desc} [{hwid}]")
                 return
             case "-S" :
                 devices = await BleakScanner.discover(timeout=timeout)
