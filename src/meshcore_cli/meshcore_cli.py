@@ -2108,9 +2108,9 @@ async def main(argv):
 
     mc = None
     if not hostname is None : # connect via tcp
-        mc = await MeshCore.create_tcp(host=hostname, port=port, debug=debug)
+        mc = await MeshCore.create_tcp(host=hostname, port=port, debug=debug, only_error=json_output)
     elif not serial_port is None : # connect via serial port
-        mc = await MeshCore.create_serial(port=serial_port, baudrate=baudrate, debug=debug)
+        mc = await MeshCore.create_serial(port=serial_port, baudrate=baudrate, debug=debug, only_error=json_output)
     else : #connect via ble
         if address is None or address == "" or len(address.split(":")) != 6 :
             logger.info(f"Scanning BLE for device matching {address}")
@@ -2127,7 +2127,7 @@ async def main(argv):
                 logger.info(f"Couldn't find device {address}")
                 return
 
-        mc = await MeshCore.create_ble(address=address, debug=debug)
+        mc = await MeshCore.create_ble(address=address, debug=debug, only_error=json_output)
 
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
