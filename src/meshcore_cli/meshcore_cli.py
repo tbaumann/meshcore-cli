@@ -789,7 +789,7 @@ async def msg_ack (mc, contact, msg) :
         return False
 
     exp_ack = result.payload["expected_ack"].hex()
-    timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact else contact["timeout"]
+    timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
     res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=timeout)
     if res is None :
         return False
@@ -1385,7 +1385,7 @@ async def next_cmd(mc, cmds, json_output=False):
                         else:
                             print(f"Error while loging: {res}")
                     else: # should probably wait for the good ack
-                        timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                        timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
                         res = await mc.wait_for_event(EventType.LOGIN_SUCCESS, timeout=timeout)
                         logger.debug(res)
                         if res is None:
@@ -1429,7 +1429,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting status: {res}")
                 else :
-                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
                     res = await mc.wait_for_event(EventType.STATUS_RESPONSE, timeout=timeout)
                     logger.debug(res)
                     if res is None:
@@ -1449,7 +1449,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 if res.type == EventType.ERROR:
                     print(f"Error while requesting telemetry")
                 else:
-                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact else contact["timeout"]
+                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
                     res = await mc.wait_for_event(EventType.TELEMETRY_RESPONSE, timeout=timeout)
                     logger.debug(res)
                     if res is None:
