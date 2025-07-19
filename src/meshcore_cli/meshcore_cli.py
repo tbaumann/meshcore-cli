@@ -1414,7 +1414,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else:
                     print("Logout ok")
 
-            case "timeout_for_contact" :
+            case "contact_timeout" :
                 argnum = 2
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
@@ -2059,7 +2059,7 @@ async def main(argv):
                 print("BLE devices:")
                 devices = await BleakScanner.discover(timeout=timeout)
                 if len(devices) == 0:
-                    logger.error(" No ble device found")
+                    print(" No ble device found")
                 for d in devices :
                     if not d.name is None and d.name.startswith("MeshCore-"):
                         print(f" {d.address}  {d.name}")
@@ -2158,6 +2158,13 @@ async def main(argv):
     if os.path.exists(MCCLI_INIT_SCRIPT) and not json_output :
         logger.debug(f"Executing init script : {MCCLI_INIT_SCRIPT}")
         await process_script(mc, MCCLI_INIT_SCRIPT, json_output)
+
+    device_init_script = MCCLI_CONFIG_DIR + mc.self_info["name"] + ".init"
+    if os.path.exists(device_init_script) :
+        logger.info(f"Executing device init script : {device_init_script}")
+        await process_script(mc, device_init_script, json_output)
+    else:
+        logger.debug(f"No device init script for {mc.self_info['name']}")
 
     if len(args) == 0 : # no args, run in chat mode
         await process_cmds(mc, ["chat"], json_output)
