@@ -831,10 +831,15 @@ async def next_cmd(mc, cmds, json_output=False):
                     res = await mc.commands.set_time(int(time.time()))
                     logger.debug(res)
                     if res.type == EventType.ERROR:
-                        if json_output :
+                        if res.payload["error_code"] == 6 :
+                            if json_output:
+                                print(json.dumps({"ok": "No sync needed"}))
+                            else:
+                                print("No time sync needed")
+                        elif json_output :
                             print(json.dumps({"error" : "Error syncing time"}))
                         else:
-                            print(f"Error setting time: {res}")
+                            print(f"Error syncing time: {res}")
                     elif json_output :
                         res.payload["ok"] = "time synced"
                         print(json.dumps(res.payload, indent=4))
@@ -856,7 +861,12 @@ async def next_cmd(mc, cmds, json_output=False):
                 res = await mc.commands.set_time(int(time.time()))
                 logger.debug(res)
                 if res.type == EventType.ERROR:
-                    if json_output :
+                    if res.payload["error_code"] == 6 :
+                        if json_output:
+                            print(json.dumps({"ok": "No sync needed"}))
+                        else:
+                            print("No time sync needed")
+                    elif json_output :
                         print(json.dumps({"error" : "Error syncing time"}))
                     else:
                         print(f"Error syncing time: {res}")
