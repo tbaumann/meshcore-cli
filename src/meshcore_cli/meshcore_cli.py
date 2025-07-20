@@ -731,7 +731,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 args = [cmds[0], contact['adv_name'], cmds[1]]
                 await process_cmds(mc, args)
 
-            elif contact["type"] == 4 and (line.startswith("req_mma ")) :
+            elif contact["type"] == 4 and \
+                (line.startswith("req_mma ") or line.startswith('rm ')) :
                 cmds = line.split(" ")
                 if len(cmds) < 3 :
                     cmds.append("0")
@@ -1484,7 +1485,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     print(json.dumps(res))
 
-            case "req_mma" :
+            case "req_mma" | "rm":
                 argnum = 3
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
