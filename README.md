@@ -30,6 +30,8 @@ If the directory exists, default ble address and history will be stored there.
 
 If there is an initialization script file called ```init```, it will be executed just before the commands provided on command line are executed (and after evaluation of the arguments).
 
+Init files can also be defined for a given device, meshcore-cli will look for ```&lt;device-name>.init``` file in configuration directory (usefull to specify timeout for contacts that are behind bridges with ```contact_timeout``` command).
+
 ### Arguments
 
 Arguments mostly deals with ble connection
@@ -81,13 +83,14 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     advert                 : sends advert                           a
     floodadv               : flood advert
     get &lt;param>            : gets a param, "get help" for more
-    set &lt;param> &lt;value>    : sets a param, "set help" for more 
+    set &lt;param> &lt;value>    : sets a param, "set help" for more
     time &lt;epoch>           : sets time to given epoch
     clock                  : get current time
     clock sync             : sync device clock                      st
   Contacts
     contacts / list        : gets contact list                      lc
     contact_info &lt;ct>      : prints information for contact ct      ci
+    contact_timeout &lt;ct> v : sets temp default timeout for contact
     share_contact &lt;ct>     : share a contact with others            sc
     export_contact &lt;ct>    : get a contact's URI                    ec
     import_contact &lt;URI>   : import a contact from its URI          ic
@@ -97,6 +100,11 @@ Commands are given after arguments, they can be chained and some have shortcuts.
     change_path &lt;ct> &lt;pth> : change the path to a contact           cp
     change_flags &lt;ct> &lt;f>  : change contact flags (tel_l|tel_a|star)cf
     req_telemetry &lt;ct>     : prints telemetry data as json          rt
+    req_mma &lt;ct>           : requests min/max/avg for a sensor      rm
+    req_acl &lt;ct>           : requests access control list for sensor
+    pending_contacts       : show pending contacts
+    add_pending &lt;key>      : manually add pending contact from key
+    flush_pending          : flush pending contact clist
   Repeaters
     login &lt;name> &lt;pwd>     : log into a node (rep) with given pwd   l
     logout &lt;name>          : log out of a repeater

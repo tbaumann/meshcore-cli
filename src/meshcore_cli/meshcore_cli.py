@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.6"
+VERSION = "v1.1.7"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1979,6 +1979,7 @@ def command_help():
   Contacts
     contacts / list        : gets contact list                      lc
     contact_info <ct>      : prints information for contact ct      ci
+    contact_timeout <ct> v : sets temp default timeout for contact
     share_contact <ct>     : share a contact with others            sc
     export_contact <ct>    : get a contact's URI                    ec
     import_contact <URI>   : import a contact from its URI          ic
@@ -1988,6 +1989,8 @@ def command_help():
     change_path <ct> <pth> : change the path to a contact           cp
     change_flags <ct> <f>  : change contact flags (tel_l|tel_a|star)cf
     req_telemetry <ct>     : prints telemetry data as json          rt
+    req_mma <ct>           : requests min/max/avg for a sensor      rm
+    req_acl <ct>           : requests access control list for sensor
     pending_contacts       : show pending contacts
     add_pending <key>      : manually add pending contact from key
     flush_pending          : flush pending contact clist
@@ -2009,8 +2012,8 @@ def usage () :
     -v : prints version
     -j : json output (disables init file)
     -D : debug
-    -S : performs a ble scan and ask for device
-    -l : list available ble devices and exit
+    -S : scan for devices and show a selector
+    -l : list available ble/serial devices and exit
     -T <timeout>    : timeout for the ble scan (-S and -l) default 2s
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
