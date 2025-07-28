@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.8"
+VERSION = "v1.1.9"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -241,14 +241,37 @@ async def handle_new_contact(event):
         print(msg)
 handle_new_contact.print_new_contacts=False
 
+async def log_message(mc, msg):
+    if log_message.file is None:
+        return
+
+    if msg["type"] == "PRIV" :
+        ct = mc.get_contact_by_key_prefix(msg['pubkey_prefix'])
+        if ct is None:
+            msg["name"] = data["pubkey_prefix"]
+        else:
+            msg["name"] = ct["adv_name"]
+    elif msg["type"] == "CHAN" :
+        msg["name"] = f"channel {msg['channel_idx']}"
+    msg["timestamp"] = int(time.time())
+
+    with open(log_message.file, "a") as logfile:
+        logfile.write(json.dumps(msg) + "\n")
+
+log_message.file=None
+
 async def handle_message(event):
     """ Process incoming message events """
-    await process_event_message(handle_message.mc, event,
+    if handle_message.display :
+        await process_event_message(handle_message.mc, event,
                                 above=handle_message.above,
                                 json_output=handle_message.json_output)
+    await log_message(handle_message.mc, event.payload.copy())
+
 handle_message.json_output=False
 handle_message.mc=None
 handle_message.above=False
+handle_message.display=True
 
 async def subscribe_to_msgs(mc, json_output=False, above=False):
     """ Subscribe to incoming messages """
@@ -783,13 +806,51 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
 interactive_loop.classic = False
 interactive_loop.print_name = True
 
+async def send_cmd (mc, contact, cmd) :
+    res = await mc.commands.send_cmd(contact, cmd)
+    if not res is None and not res.type == EventType.ERROR:
+        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+        sent = res.payload.copy()
+        sent["type"] = "SENT_CMD"
+        sent["name"] = contact["adv_name"]
+        sent["text"] = cmd
+        sent["txt_type"] = 1
+        sent["name"] = mc.self_info['name']
+        await log_message(mc, sent)
+    return res
+
+async def send_chan_msg(mc, nb, msg):
+    res = await mc.commands.send_chan_msg(nb, msg)
+    if not res is None and not res.type == EventType.ERROR:
+        sent = res.payload.copy()
+        sent["type"] = "SENT_CHAN"
+        sent["channel_idx"] = nb
+        sent["text"] = msg
+        sent["txt_type"] = 0
+        sent["name"] = mc.self_info['name']
+        await log_message(mc, sent) 
+    return res
+
+async def send_msg (mc, contact, msg) :
+    res = await mc.commands.send_msg(contact, msg)
+    if not res is None and not res.type == EventType.ERROR:
+        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+        sent = res.payload.copy()
+        sent["type"] = "SENT_MSG"
+        sent["name"] = contact["adv_name"]
+        sent["text"] = msg
+        sent["txt_type"] = 0
+        sent["name"] = mc.self_info['name']
+        await log_message(mc, sent)
+    return res
+
 async def msg_ack (mc, contact, msg) :
-    result = await mc.commands.send_msg(contact, msg)
+    result = await send_msg(mc, contact, msg)
     if result.type == EventType.ERROR:
         print(f"⚠️ Failed to send message: {result.payload}")
         return False
 
-    exp_ack = result.payload["expected_ack"].hex()
+    exp_ack = result.payload["expected_ack"]
     timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
     res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=timeout)
     if res is None :
@@ -1334,17 +1395,16 @@ async def next_cmd(mc, cmds, json_output=False):
                     else:
                         print(f"Unknown contact {cmds[1]}")
                 else:
-                    res = await mc.commands.send_msg(contact, cmds[2])
+                    res = await send_msg(mc, contact, cmds[2])
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error sending message: {res}")
                     elif json_output :
-                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                         print(json.dumps(res.payload, indent=4))
 
             case "chan"|"ch" :
                 argnum = 2
-                res = await mc.commands.send_chan_msg(int(cmds[1]), cmds[2])
+                res = await send_chan_msg(mc, int(cmds[1]), cmds[2])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error sending message: {res}")
@@ -1353,7 +1413,7 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "public" | "dch" : # default chan
                 argnum = 1
-                res = await mc.commands.send_chan_msg(0, cmds[1])
+                res = await send_chan_msg(mc, 0, cmds[1])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error sending message: {res}")
@@ -1370,12 +1430,11 @@ async def next_cmd(mc, cmds, json_output=False):
                     else:
                         print(f"Unknown contact {cmds[1]}")
                 else:
-                    res = await mc.commands.send_cmd(contact, cmds[2])
+                    res = await send_cmd(mc, contact, cmds[2])
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error sending cmd: {res}")
                     elif json_output :
-                        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
                         print(json.dumps(res.payload, indent=4))
 
             case "login" | "l" :
@@ -2160,6 +2219,9 @@ async def main(argv):
     if res.type == EventType.ERROR :
         logger.error(f"Error while querying device: {res}")
         return
+
+    if os.path.isdir(MCCLI_CONFIG_DIR) :
+        log_message.file = MCCLI_CONFIG_DIR + mc.self_info["name"] + ".msgs"
 
     if (json_output) :
         logger.setLevel(logging.ERROR)
