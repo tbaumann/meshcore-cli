@@ -340,6 +340,7 @@ def make_completion_dict(contacts, pending={}, to=None):
             "upload_contact" : contact_list,
             "share_contact" : contact_list,
             "path": contact_list,
+            "disc_path" : contact_list,
             "reset_path" : contact_list,
             "change_path" : contact_list,
             "change_flags" : contact_list,
@@ -414,10 +415,11 @@ def make_completion_dict(contacts, pending={}, to=None):
         if to['type'] > 0: # contact
             completion_list.update({
                 "contact_info": None,
-                "path": None,
                 "export_contact" : None,
                 "share_contact" : None,
                 "upload_contact" : None,
+                "path": None,
+                "disc_path": None,
                 "reset_path" : None,
                 "change_path" : None,
                 "change_flags" : None,
@@ -696,6 +698,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line == "ec" or line == "export_contact" or\
                     line == "uc" or line == "upload_contact" or\
                     line == "rp" or line == "reset_path" or\
+                    line == "dp" or line == "disc_path" or\
                     line == "contact_info" or line == "ci" or\
                     line == "req_status" or line == "rs" or\
                     line == "req_telemetry" or line == "rt" or\
@@ -1529,6 +1532,33 @@ async def next_cmd(mc, cmds, json_output=False):
                             print("Timeout waiting telemetry")
                     else :
                         print(json.dumps(res.payload, indent=4))
+        
+            case "disc_path" | "dp" :
+                argnum = 1
+                await mc.ensure_contacts()
+                contact = mc.get_contact_by_name(cmds[1])
+                res = await mc.commands.send_path_discovery(contact)
+                logger.debug(res)
+                if res.type == EventType.ERROR:
+                    print(f"Error while discovering path")
+                else:
+                    timeout = res.payload["suggested_timeout"]/800 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
+                    res = await mc.wait_for_event(EventType.PATH_RESPONSE, timeout=timeout)
+                    logger.debug(res)
+                    if res is None:
+                        if json_output :
+                            print(json.dumps({"error" : "Timeout discovering path"}))
+                        else:
+                            print("Timeout discovering path")
+                    else :
+                        if json_output :
+                            print(json.dumps(res.payload, indent=4))
+                        else:
+                            outp = res.payload['out_path']
+                            outp = outp if outp != "" else "direct"
+                            inp = res.payload['in_path']
+                            inp = inp if inp != "" else "direct"
+                            print(f"Path for {contact['adv_name']}: out {outp}, in {inp}")
 
             case "req_tele2" :
                 argnum = 1
