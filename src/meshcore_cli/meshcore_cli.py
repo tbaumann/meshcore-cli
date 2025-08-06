@@ -2216,7 +2216,12 @@ async def main(argv):
     elif not serial_port is None : # connect via serial port
         mc = await MeshCore.create_serial(port=serial_port, baudrate=baudrate, debug=debug, only_error=json_output)
     else : #connect via ble
-        if device is None and (address is None or address == "" or len(address.split(":")) != 6) :
+        client = None
+        if device or address and address.split(":") == 6 :
+            pass
+        elif address and len(address) == 36 and len(address.split("-") == 5):
+            client = BleakClient(address)
+        else:
             logger.info(f"Scanning BLE for device matching {address}")
             devices = await BleakScanner.discover(timeout=timeout)
             found = False
