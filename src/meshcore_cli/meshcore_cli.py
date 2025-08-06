@@ -1565,7 +1565,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.binary.req_telemetry(contact, timeout)
+                res = await mc.commands.req_telemetry(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1595,7 +1595,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     to_secs = int(cmds[3]) * 60
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.binary.req_mma(contact, from_secs, to_secs, timeout)
+                res = await mc.commands.req_mma(contact, from_secs, to_secs, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1609,7 +1609,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.binary.req_acl(contact, timeout)
+                res = await mc.commands.req_acl(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1634,7 +1634,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.binary.req_binary(contact, bytes.fromhex(cmds[2]), timeout)
+                res = await mc.commands.req_binary(contact, bytes.fromhex(cmds[2]), timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting binary data"}))
