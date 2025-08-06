@@ -2119,6 +2119,7 @@ async def main(argv):
     json_output = JSON
     debug = False
     address = ADDRESS
+    device = None
     port = 5000
     hostname = None
     serial_port = None
@@ -2176,7 +2177,7 @@ async def main(argv):
                 choices = []
                 for d in devices:
                     if not d.name is None and d.name.startswith("MeshCore-"):
-                        choices.append(({"type":"ble","address":d.address}, f"{d.address:<22} {d.name}"))
+                        choices.append(({"type":"ble","device":d}, f"{d.address:<22} {d.name}"))
 
                 ports = serial.tools.list_ports.comports()
                 for port, desc, hwid in sorted(ports):
@@ -2196,7 +2197,7 @@ async def main(argv):
                     return
 
                 if result["type"] == "ble":
-                    address = result["address"]
+                    device = result["device"]
                 elif result["type"] == "serial":
                     serial_port = result["port"]
                 else:
@@ -2215,7 +2216,7 @@ async def main(argv):
     elif not serial_port is None : # connect via serial port
         mc = await MeshCore.create_serial(port=serial_port, baudrate=baudrate, debug=debug, only_error=json_output)
     else : #connect via ble
-        if address is None or address == "" or len(address.split(":")) != 6 :
+        if device is None and (address is None or address == "" or len(address.split(":")) != 6) :
             logger.info(f"Scanning BLE for device matching {address}")
             devices = await BleakScanner.discover(timeout=timeout)
             found = False
@@ -2223,14 +2224,21 @@ async def main(argv):
                 if not d.name is None and d.name.startswith("MeshCore-") and\
                         (address is None or address in d.name) :
                     address=d.address
+                    device=d
                     logger.info(f"Found device {d.name} {d.address}")
                     found = True
                     break
+                elif d.address == address : # on a mac, address is an uuid
+                    device = d
+                    logger.info(f"Found device {d.name} {d.address}")
+                    found = True
+                    break
+
             if not found :
                 logger.info(f"Couldn't find device {address}")
                 return
 
-        mc = await MeshCore.create_ble(address=address, debug=debug, only_error=json_output)
+        mc = await MeshCore.create_ble(address=address, device=device, debug=debug, only_error=json_output)
 
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
