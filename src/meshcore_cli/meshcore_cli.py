@@ -2217,10 +2217,10 @@ async def main(argv):
         mc = await MeshCore.create_serial(port=serial_port, baudrate=baudrate, debug=debug, only_error=json_output)
     else : #connect via ble
         client = None
-        if device or address and address.split(":") == 6 :
+        if device or address and len(address.split(":")) == 6 :
             pass
         elif address and len(address) == 36 and len(address.split("-") == 5):
-            client = BleakClient(address)
+            client = BleakClient(address) # mac uses uuid, we'll pass a client
         else:
             logger.info(f"Scanning BLE for device matching {address}")
             devices = await BleakScanner.discover(timeout=timeout)
