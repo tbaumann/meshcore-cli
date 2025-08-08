@@ -2243,7 +2243,7 @@ async def main(argv):
                 logger.info(f"Couldn't find device {address}")
                 return
 
-        mc = await MeshCore.create_ble(address=address, device=device, debug=debug, only_error=json_output)
+        mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output)
 
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
