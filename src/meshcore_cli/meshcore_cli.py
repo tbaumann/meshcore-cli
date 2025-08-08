@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.13"
+VERSION = "v1.1.15"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -2219,7 +2219,7 @@ async def main(argv):
         client = None
         if device or address and len(address.split(":")) == 6 :
             pass
-        elif address and len(address) == 36 and len(address.split("-") == 5):
+        elif address and len(address) == 36 and len(address.split("-")) == 5:
             client = BleakClient(address) # mac uses uuid, we'll pass a client
         else:
             logger.info(f"Scanning BLE for device matching {address}")
