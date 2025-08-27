@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.15"
+VERSION = "v1.1.16"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -733,7 +733,13 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 cmds = shlex.split(line)
                 off = 1 if line.startswith("set perm") else 0
                 name = cmds[1 + off]
-                perm = int(cmds[2 + off],0)
+                perm_string = cmds[2 + off]
+                if (perm_string.startswith("0x")):
+                    perm = int(perm_string,0)
+                elif (perm_string.startswith("#")):
+                    perm = int(perm_string[1:])
+                else:
+                    perm = int(perm_string,16)
                 ct=mc.get_contact_by_name(name)
                 if ct is None:
                     ct=mc.get_contact_by_key_prefix(name)
