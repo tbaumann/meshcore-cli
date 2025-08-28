@@ -19,6 +19,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import radiolist_dialog
+from bleak import BleakClient
 
 from meshcore import MeshCore, EventType, logger
 
