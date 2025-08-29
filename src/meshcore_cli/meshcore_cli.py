@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.18"
+VERSION = "v1.1.19"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -349,6 +349,7 @@ def make_completion_dict(contacts, pending={}, to=None):
             "login" : contact_list,
             "cmd" : contact_list,
             "req_status" : contact_list,
+            "req_bstatus" : contact_list,
             "logout" : contact_list,
             "req_telemetry" : contact_list,
             "req_binary" : contact_list,
@@ -442,6 +443,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "login" : None,
                 "logout" : None,
                 "req_status" : None,
+                "req_bstatus" : None,
                 "cmd" : None,
                 "ver" : None,
                 "advert" : None,
@@ -701,6 +703,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     line == "dp" or line == "disc_path" or\
                     line == "contact_info" or line == "ci" or\
                     line == "req_status" or line == "rs" or\
+                    line == "req_bstatus" or line == "rbs" or\
                     line == "req_telemetry" or line == "rt" or\
                     line == "req_acl" or\
                     line == "path" or\
@@ -1580,7 +1583,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     print(json.dumps(res))
 
-            case "req_bstatus" :
+            case "req_bstatus"|"rbs" :
                 argnum = 1
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
