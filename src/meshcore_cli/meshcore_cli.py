@@ -857,10 +857,17 @@ async def send_msg (mc, contact, msg) :
     return res
 
 async def msg_ack (mc, contact, msg) :
-    result = await send_msg(mc, contact, msg)
-    if result.type == EventType.ERROR:
-        print(f"⚠️ Failed to send message: {result.payload}")
-        return False
+    res = await mc.commands.send_msg_reliable(contact, msg)
+    if not res is None and not res.type == EventType.ERROR:
+        res.payload["expected_ack"] = res.payload["expected_ack"].hex()
+        sent = res.payload.copy()
+        sent["type"] = "SENT_MSG"
+        sent["name"] = contact["adv_name"]
+        sent["text"] = msg
+        sent["txt_type"] = 0
+        sent["name"] = mc.self_info['name']
+        await log_message(mc, sent)
+    return not res is None
 
     exp_ack = result.payload["expected_ack"]
     timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
