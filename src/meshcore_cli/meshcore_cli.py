@@ -861,7 +861,7 @@ async def send_msg (mc, contact, msg) :
     return res
 
 async def msg_ack (mc, contact, msg) :
-    res = await mc.commands.send_msg_reliable(contact, msg, 
+    res = await mc.commands.send_msg_with_retry(contact, msg, 
                 max_attempts=msg_ack.max_attempts,
                 flood_after=msg_ack.flood_after)
     if not res is None and not res.type == EventType.ERROR:
