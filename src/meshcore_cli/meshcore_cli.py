@@ -380,6 +380,8 @@ def make_completion_dict(contacts, pending={}, to=None):
                     "telemetry_mode_env" : {"always" : None, "device":None, "never":None},
                     "advert_loc_policy" : {"none" : None, "share" : None},
                     "auto_update_contacts" : {"on":None, "off":None},
+                    "max_attempts" : None,
+                    "flood_after" : None,
                     },
             "get" : {"name":None,
                      "bat":None,
@@ -403,7 +405,9 @@ def make_completion_dict(contacts, pending={}, to=None):
                      "telemetry_mode_env":None,
                      "advert_loc_policy":None,
                      "auto_update_contacts":None,
-                     "custom":None
+                     "max_attempts":None,
+                     "flood_after":None,
+                     "custom":None,
                      },
         })
         completion_list["set"].update(make_completion_dict.custom_vars)
@@ -857,7 +861,9 @@ async def send_msg (mc, contact, msg) :
     return res
 
 async def msg_ack (mc, contact, msg) :
-    res = await mc.commands.send_msg_reliable(contact, msg)
+    res = await mc.commands.send_msg_reliable(contact, msg, 
+                max_attempts=msg_ack.max_attempts,
+                flood_after=msg_ack.flood_after)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
         sent = res.payload.copy()
@@ -868,14 +874,8 @@ async def msg_ack (mc, contact, msg) :
         sent["name"] = mc.self_info['name']
         await log_message(mc, sent)
     return not res is None
-
-    exp_ack = result.payload["expected_ack"]
-    timeout = result.payload["suggested_timeout"] / 1000 * 1.2 if not "timeout" in contact or contact['timeout']==0 else contact["timeout"]
-    res = await mc.wait_for_event(EventType.ACK, attribute_filters={"code": exp_ack}, timeout=timeout)
-    if res is None :
-        return False
-
-    return True
+msg_ack.max_attempts=3
+msg_ack.flood_after=2
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
@@ -989,6 +989,10 @@ async def next_cmd(mc, cmds, json_output=False):
     print_adverts <on/off>      : display adverts as they come
     print_new_contacts <on/off> : display new pending contacts when available
     print_path_updates <on/off> : display path updates as they come""")
+                    case "max_attempts":
+                        msg_ack.max_attempts=int(cmds[2])
+                    case "flood_after":
+                        msg_ack.flood_after=int(cmds[2])
                     case "print_name":
                         interactive_loop.print_name = (cmds[2] == "on")
                         if json_output :
@@ -1198,6 +1202,16 @@ async def next_cmd(mc, cmds, json_output=False):
     print_path_updates : display path updates as they come
     custom             : all custom variables in json format
                 each custom var can also be get/set directly""")
+                    case "max_attempts":
+                        if json_output :
+                            print(json.dumps({"max_attempts" : msg_ack.max_attempts}))
+                        else:
+                            print(f"max_attempts: {msg_ack.max_attempts}")
+                    case "flood_after":
+                        if json_output :
+                            print(json.dumps({"flood_after" : msg_ack.flood_after}))
+                        else:
+                            print(f"flood_after: {msg_ack.flood_after}")
                     case "print_name":
                         if json_output :
                             print(json.dumps({"print_name" : interactive_loop.print_name}))
