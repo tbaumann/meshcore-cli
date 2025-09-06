@@ -381,6 +381,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                     "advert_loc_policy" : {"none" : None, "share" : None},
                     "auto_update_contacts" : {"on":None, "off":None},
                     "max_attempts" : None,
+                    "max_flood_attempts" : None,
                     "flood_after" : None,
                     },
             "get" : {"name":None,
@@ -406,6 +407,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                      "advert_loc_policy":None,
                      "auto_update_contacts":None,
                      "max_attempts":None,
+                     "max_flood_attempts":None,
                      "flood_after":None,
                      "custom":None,
                      },
@@ -863,7 +865,8 @@ async def send_msg (mc, contact, msg) :
 async def msg_ack (mc, contact, msg) :
     res = await mc.commands.send_msg_with_retry(contact, msg, 
                 max_attempts=msg_ack.max_attempts,
-                flood_after=msg_ack.flood_after)
+                flood_after=msg_ack.flood_after,
+                max_flood_attempts=msg_ack.max_flood_attempts)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
         sent = res.payload.copy()
@@ -876,6 +879,7 @@ async def msg_ack (mc, contact, msg) :
     return not res is None
 msg_ack.max_attempts=3
 msg_ack.flood_after=2
+msg_ack.max_flood_attempts=1
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
@@ -989,6 +993,8 @@ async def next_cmd(mc, cmds, json_output=False):
     print_adverts <on/off>      : display adverts as they come
     print_new_contacts <on/off> : display new pending contacts when available
     print_path_updates <on/off> : display path updates as they come""")
+                    case "max_flood_attempts":
+                        msg_ack.max_flood_attempts=int(cmds[2])
                     case "max_attempts":
                         msg_ack.max_attempts=int(cmds[2])
                     case "flood_after":
@@ -1202,11 +1208,11 @@ async def next_cmd(mc, cmds, json_output=False):
     print_path_updates : display path updates as they come
     custom             : all custom variables in json format
                 each custom var can also be get/set directly""")
-                    case "max_attempts":
+                    case "max_flood_attempts":
                         if json_output :
-                            print(json.dumps({"max_attempts" : msg_ack.max_attempts}))
+                            print(json.dumps({"max_flood_attempts" : msg_ack.max_flood_attempts}))
                         else:
-                            print(f"max_attempts: {msg_ack.max_attempts}")
+                            print(f"max_flood_attempts: {msg_ack.max_flood_attempts}")
                     case "flood_after":
                         if json_output :
                             print(json.dumps({"flood_after" : msg_ack.flood_after}))
