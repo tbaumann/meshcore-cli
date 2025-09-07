@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.20"
+VERSION = "v1.1.21"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1596,12 +1596,12 @@ async def next_cmd(mc, cmds, json_output=False):
                             inp = inp if inp != "" else "direct"
                             print(f"Path for {contact['adv_name']}: out {outp}, in {inp}")
 
-            case "req_btele" :
+            case "req_btelemetry"|"rbt" :
                 argnum = 1
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.req_telemetry(contact, timeout)
+                res = await mc.commands.req_telemetry_sync(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1615,7 +1615,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.req_status(contact, timeout)
+                res = await mc.commands.req_status_sync(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1645,7 +1645,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     to_secs = int(cmds[3]) * 60
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.req_mma(contact, from_secs, to_secs, timeout)
+                res = await mc.commands.req_mma_sync(contact, from_secs, to_secs, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
@@ -1659,7 +1659,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 await mc.ensure_contacts()
                 contact = mc.get_contact_by_name(cmds[1])
                 timeout = 0 if not "timeout" in contact else contact["timeout"]
-                res = await mc.commands.req_acl(contact, timeout)
+                res = await mc.commands.req_acl_sync(contact, timeout)
                 if res is None :
                     if json_output :
                         print(json.dumps({"error" : "Getting data"}))
