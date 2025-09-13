@@ -459,6 +459,8 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "start ota" : None,
                 "password" : None,
                 "neighbors" : None,
+                "req_acl":None,
+                "setperm":contact_list,
                 "get" : {"name" : None,
                          "role":None,
                          "radio" : None,
@@ -480,6 +482,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "telemetry" : None,
                          "status" : None,
                          "timeout" : None,
+                         "acl":None,
                          },
                 "set" : {"name" : None,
                          "radio" : {",,,":None, "f,bw,sf,cr": None},
@@ -498,25 +501,22 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "lat" : None,
                          "lon" : None,
                          "timeout" : None,
+                         "perm":contact_list,
                          },
                 "erase": None,
                 "log" : {"start" : None, "stop" : None, "erase" : None}
             })
 
-        if (to['type'] == 4) : #sensors
+        if (to['type'] == 4) : #specific to sensors
             completion_list.update({
                 "req_mma":{"begin end":None},
-                "req_acl":None,
-                "setperm":contact_list,
             })
 
             completion_list["get"].update({
                 "mma":None,
-                "acl":None,
             })
 
             completion_list["set"].update({
-                "perm":contact_list,
             })
 
     completion_list.update({
@@ -725,9 +725,9 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 print(f"timeout: {0 if not 'timeout' in contact else contact['timeout']}")
 
             elif contact["type"] == 4 and\
-                    (line == "get acl" or line.startswith("get mma ")) or\
-                    contact["type"] > 1 and\
-                    (line.startswith("get telemetry") or line.startswith("get status")):
+                    (line.startswith("get mma ")) or\
+                 contact["type"] > 1 and\
+                    (line.startswith("get telemetry") or line.startswith("get status") or line.startswith("get acl")):
                 cmds = line.split(" ")
                 args = [f"req_{cmds[1]}", contact['adv_name']]
                 if len(cmds) > 2 :
@@ -737,7 +737,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 await process_cmds(mc, args)
 
             # special treatment for setperm to support contact name as param
-            elif contact["type"] == 4 and\
+            elif contact["type"] > 1 and\
                 (line.startswith("setperm ") or line.startswith("set perm ")):
                 cmds = shlex.split(line)
                 off = 1 if line.startswith("set perm") else 0
