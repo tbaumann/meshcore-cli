@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.22"
+VERSION = "v1.1.23"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1413,7 +1413,11 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "set_channel":
                 argnum = 3
-                res = await mc.commands.set_channel(int(cmds[1]), cmds[2], bytes.fromhex(cmds[3]))
+                if cmds[2].startswith("#") or len(cmds) == 3:
+                    argnum = 2
+                    res = await mc.commands.set_channel(int(cmds[1]), cmds[2])
+                else:
+                    res = await mc.commands.set_channel(int(cmds[1]), cmds[2], bytes.fromhex(cmds[3]))
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error while setting channel")
