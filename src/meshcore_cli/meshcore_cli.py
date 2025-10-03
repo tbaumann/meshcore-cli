@@ -863,10 +863,12 @@ async def send_msg (mc, contact, msg) :
     return res
 
 async def msg_ack (mc, contact, msg) :
+    timeout = 0 if not 'timeout' in contact else contact['timeout']
     res = await mc.commands.send_msg_with_retry(contact, msg, 
                 max_attempts=msg_ack.max_attempts,
                 flood_after=msg_ack.flood_after,
-                max_flood_attempts=msg_ack.max_flood_attempts)
+                max_flood_attempts=msg_ack.max_flood_attempts,
+                timeout=timeout)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
         sent = res.payload.copy()
