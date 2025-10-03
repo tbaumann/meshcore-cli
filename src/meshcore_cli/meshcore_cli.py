@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.23"
+VERSION = "v1.1.24"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -2160,6 +2160,7 @@ def usage () :
     -T <timeout>    : timeout for the ble scan (-S and -l) default 2s
     -a <address>    : specifies device address (can be a name)
     -d <name>       : filter meshcore devices with name or address
+    -P              : forces pairing via the OS
     -t <hostname>   : connects via tcp/ip
     -p <port>       : specifies tcp port (default 5000)
     -s <port>       : use serial port <port>
@@ -2179,19 +2180,22 @@ async def main(argv):
     serial_port = None
     baudrate = 115200
     timeout = 2
+    pin = None
     # If there is an address in config file, use it by default
     # unless an arg is explicitely given
     if os.path.exists(MCCLI_ADDRESS) :
         with open(MCCLI_ADDRESS, encoding="utf-8") as f :
             address = f.readline().strip()
 
-    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhvSlT:")
+    opts, args = getopt.getopt(argv, "a:d:s:ht:p:b:jDhvSlT:P")
     for opt, arg in opts :
         match opt:
             case "-d" : # name specified on cmdline
                 address = arg
             case "-a" : # address specified on cmdline
                 address = arg
+            case "-P" : # pairing
+                pin = True
             case "-s" : # serial port
                 serial_port = arg
             case "-b" :
@@ -2297,7 +2301,7 @@ async def main(argv):
                 logger.info(f"Couldn't find device {address}")
                 return
 
-        mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output)
+        mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output, pin=pin)
 
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
@@ -2311,6 +2315,8 @@ async def main(argv):
     mc.subscribe(EventType.ADVERTISEMENT, handle_advert)
     mc.subscribe(EventType.PATH_UPDATE, handle_path_update)
     mc.subscribe(EventType.NEW_CONTACT, handle_new_contact)
+
+    mc.auto_update_contacts = True
 
     res = await mc.commands.send_device_query()
     if res.type == EventType.ERROR :
