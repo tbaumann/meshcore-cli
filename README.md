@@ -4,13 +4,19 @@ meshcore-cli : CLI interface to MeschCore companion app over BLE, TCP or Serial
 
 ## Install
 
-Meshcore-cli depends on the [python meshcore](https://github.com/fdlamotte/meshcore_py) package. You can install both via `pip` or `pipx` using the command :
+Meshcore-cli depends on the [python meshcore](https://github.com/fdlamotte/meshcore_py) package. You can install both via `pip` or `pipx` using the command:
 
- <pre>
+<pre>
 $ pipx install meshcore-cli
 </pre>
 
 It will install you `meshcore-cli` and `meshcli`, which is an alias to the former.
+
+You can use the flake under [nix](https://nixos.org/):
+
+<pre>
+$ nix run github:meshcore-dev/meshcore-cli#meshcore-cli
+</pre>
 
 If you want meshcore-cli to remember last BLE device, you should have some `$HOME/.config/meshcore` where configuration for meschcore-cli will be stored (if not it will use first device it finds).
 
@@ -24,13 +30,13 @@ If using BLE, don't forget to pair your device first (using `bluetoothctl` for i
 
 ### Configuration
 
-Configuration files are stored in ```$HOME/.config/meshcore```
+Configuration files are stored in `$HOME/.config/meshcore`
 
 If the directory exists, default ble address and history will be stored there.
 
-If there is an initialization script file called ```init```, it will be executed just before the commands provided on command line are executed (and after evaluation of the arguments).
+If there is an initialization script file called `init`, it will be executed just before the commands provided on command line are executed (and after evaluation of the arguments).
 
-Init files can also be defined for a given device, meshcore-cli will look for ```&lt;device-name>.init``` file in configuration directory (usefull to specify timeout for contacts that are behind bridges with ```contact_timeout``` command).
+Init files can also be defined for a given device, meshcore-cli will look for `&lt;device-name>.init` file in configuration directory (usefull to specify timeout for contacts that are behind bridges with `contact_timeout` command).
 
 ### Arguments
 
@@ -52,9 +58,9 @@ Arguments mostly deals with ble connection
     -b &lt;baudrate>   : specify baudrate
 </pre>
 
-### Available Commands 
+### Available Commands
 
-Commands are given after arguments, they can be chained and some have shortcuts. Also prefixing a command with a dot ```.``` will force it to output json instead of synthetic result.
+Commands are given after arguments, they can be chained and some have shortcuts. Also prefixing a command with a dot `.` will force it to output json instead of synthetic result.
 
 <pre>
   General commands
@@ -122,10 +128,11 @@ Chat mode lets you interactively interact with your node or remote nodes. It is 
 You'll get a prompt with the name of your node. From here you can type meshcore-cli commands. The prompt has history and a basic completion (pressing tab will display possible command or argument options).
 
 The `to` command is specific to chat mode, it lets you enter the recipient for next command. By default you're on your node but you can enter other nodes or public rooms. Here are some examples :
-* `to <nodename>` : will enter nodename
-* `to /`, `to ~` : will go to the root (your node)
-* `to ..` : will go to the last node (it will switch between the two last nodes, this is just a 1-depth history)
-* `to !` : will switch to the node you received last message from
+
+- `to <nodename>` : will enter nodename
+- `to /`, `to ~` : will go to the root (your node)
+- `to ..` : will go to the last node (it will switch between the two last nodes, this is just a 1-depth history)
+- `to !` : will switch to the node you received last message from
 
 When you are connected to a node, the behaviour will depend on the node type, if you're on a chat node, it will send messages by default and you can chat. On a repeater or a room server, it will send commands (autocompletioin has been set to comply with the CommonCli class of meshcore). To send a message through a room you'll have to prefix the message with a quote or use the send command.
 
@@ -240,6 +247,3 @@ FdlRoom> clock
 FdlRoom(0): 06:40 - 18/4/2025 UTC
 FdlRoom>
 </pre>
-
-
-
