@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.25"
+VERSION = "v1.1.26"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -461,6 +461,10 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "neighbors" : None,
                 "req_acl":None,
                 "setperm":contact_list,
+                "gps" : {"on": None, "off": None, "sync": None, "setloc": None, 
+                         "advert" : {"none": None, "share": None, "prefs": None}, 
+                }
+                "sensor": {"list": None, "set": {"gps": None}, "get": {"gps": None}},
                 "get" : {"name" : None,
                          "role":None,
                          "radio" : None,
@@ -483,6 +487,12 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "status" : None,
                          "timeout" : None,
                          "acl":None,
+                         "bridge.enabled":None,
+                         "bridge.delay":None,
+                         "bridge.source":None,
+                         "bridge.baud":None,
+                         "bridge.secret":None,
+                         "bridge.type":None,
                          },
                 "set" : {"name" : None,
                          "radio" : {",,,":None, "f,bw,sf,cr": None},
@@ -502,6 +512,11 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "lon" : None,
                          "timeout" : None,
                          "perm":contact_list,
+                         "bridge.enabled": {"on": None, "off": None},
+                         "bridge.delay":None,
+                         "bridge.source":None,
+                         "bridge.baud":None,
+                         "bridge.secret":None,
                          },
                 "erase": None,
                 "log" : {"start" : None, "stop" : None, "erase" : None}
