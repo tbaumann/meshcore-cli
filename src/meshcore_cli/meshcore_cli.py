@@ -154,7 +154,11 @@ async def process_event_message(mc, ev, json_output, end="\n", above=False):
 
         elif (data['type'] == "CHAN") :
             path_str = f"{ANSI_YELLOW}({path_str}){ANSI_END}"
-            if data["channel_idx"] == 0: #public
+            if hasattr(mc, "channels"):
+                ch_name = mc.channels[data['channel_idx']]['channel_name']
+                disp = f"{ANSI_GREEN}{ch_name} {path_str}"
+                process_event_message.last_node = {"adv_name" : ch_name, "type" : 0, "chan_nb" : data['channel_idx']}
+            elif data["channel_idx"] == 0: #public
                 disp = f"{ANSI_GREEN}public {path_str}"
                 process_event_message.last_node = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
             else :
@@ -287,7 +291,7 @@ async def subscribe_to_msgs(mc, json_output=False, above=False):
         CS = mc.subscribe(EventType.CHANNEL_MSG_RECV, handle_message)
     await mc.start_auto_message_fetching()
 
-def make_completion_dict(contacts, pending={}, to=None):
+def make_completion_dict(contacts, pending={}, to=None, channels=None):
     contact_list = {}
     pending_list = {}
     to_list = {}
@@ -311,6 +315,11 @@ def make_completion_dict(contacts, pending={}, to=None):
 
     to_list["ch"] = None
     to_list["ch0"] = None
+
+    if not channels is None:
+        for c in channels :
+            if c["channel_name"] != "":
+                to_list[c["channel_name"]] = None
 
     completion_list = {
         "to" : to_list,
@@ -357,6 +366,8 @@ def make_completion_dict(contacts, pending={}, to=None):
             "self_telemetry" : None,
             "get_channel": None,
             "set_channel": None,
+            "get_channels": None,
+            "remove_channel": None,
             "set" : {
                     "name" : None,
                     "pin" : None,
@@ -461,9 +472,9 @@ def make_completion_dict(contacts, pending={}, to=None):
                 "neighbors" : None,
                 "req_acl":None,
                 "setperm":contact_list,
-                "gps" : {"on": None, "off": None, "sync": None, "setloc": None, 
+                "gps" : {"on":None,"off":None,"sync":None,"setloc":None, 
                          "advert" : {"none": None, "share": None, "prefs": None}, 
-                }
+                },
                 "sensor": {"list": None, "set": {"gps": None}, "get": {"gps": None}},
                 "get" : {"name" : None,
                          "role":None,
@@ -512,7 +523,7 @@ def make_completion_dict(contacts, pending={}, to=None):
                          "lon" : None,
                          "timeout" : None,
                          "perm":contact_list,
-                         "bridge.enabled": {"on": None, "off": None},
+                         "bridge.enabled":{"on": None, "off": None},
                          "bridge.delay":None,
                          "bridge.source":None,
                          "bridge.baud":None,
@@ -552,6 +563,7 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     prev_contact = None
 
     await mc.ensure_contacts()
+    await get_channels(mc)
     await subscribe_to_msgs(mc, above=True)
 
     handle_new_contact.print_new_contacts = True
@@ -644,7 +656,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             completer = NestedCompleter.from_nested_dict(
                             make_completion_dict(mc.contacts,
                                     mc.pending_contacts,
-                                    to=contact))
+                                    to=contact,
+                                    channels = mc.channels))
 
             line = await session.prompt_async(ANSI(prompt),
                                               complete_while_typing=False,
@@ -667,9 +680,13 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                 if nc is None:
                     if dest == "public" :
                         nc = {"adv_name" : "public", "type" : 0, "chan_nb" : 0}
+                        if hasattr(mc, "channels"):
+                            nc["adv_name"] = mc.channels[0]["channel_name"]
                     elif dest.startswith("ch"):
                         dest = int(dest[2:])
                         nc = {"adv_name" : "chan" + str(dest), "type" : 0, "chan_nb" : dest}
+                        if hasattr(mc, "channels"):
+                            nc["adv_name"] = mc.channels[dest]["channel_name"]
                     elif dest == ".." : # previous recipient
                         nc = prev_contact
                     elif dest == "~" or dest == "/" or dest == mc.self_info['name']:
@@ -677,8 +694,14 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
                     elif dest == "!" :
                         nc = process_event_message.last_node
                     else :
-                        print(f"Contact '{dest}' not found in contacts.")
-                        nc = contact
+                        chan = await get_channel_by_name(mc, dest)            
+                        if chan is None :
+                            print(f"Contact '{dest}' not found in contacts.")
+                            nc = contact
+                        else:
+                            nc = {"adv_name": chan["channel_name"],
+                                  "type": 0,
+                                  "chan_nb": chan["channel_idx"],}
                 if nc != contact :
                     last_ack = True
                     prev_contact = contact
@@ -897,6 +920,75 @@ async def msg_ack (mc, contact, msg) :
 msg_ack.max_attempts=3
 msg_ack.flood_after=2
 msg_ack.max_flood_attempts=1
+
+async def get_channel (mc, chan) :
+    if not chan.isnumeric():
+        return await get_channel_by_name(mc, chan)
+
+    nb = int(chan)
+    if hasattr(mc, 'channels') and nb < len(mc.channels) :
+        return mc.channels[nb]
+
+    res = await mc.commands.get_channel(nb)
+    if res.type == EventType.ERROR:
+        return None
+
+    info = res.payload
+    info["channel_secret"] = info["channel_secret"].hex()
+    return info
+
+async def set_channel (mc, chan, name, key=None):
+
+    if chan.isnumeric():
+        nb = int(chan)
+    else:
+        c = await get_channel_by_name(mc, chan)
+        if c is None:
+            return None
+        nb = c['channel_idx']
+
+    res = await mc.commands.set_channel(nb, name, key)
+
+    if res.type == EventType.ERROR:
+        return None
+
+    res = await mc.commands.get_channel(nb)
+    if res.type == EventType.ERROR:
+        return None
+
+    info = res.payload
+    info["channel_secret"] = info["channel_secret"].hex()
+
+    if hasattr(mc,'channels') :
+        mc.channels[nb] = info
+
+    return info
+
+async def get_channel_by_name (mc, name):
+    if not hasattr(mc, 'channels') :
+        get_channels(mc)
+
+    for c in mc.channels:
+        if c['channel_name'] == name:
+            return c
+
+    return None
+
+async def get_channels (mc) :
+    if hasattr(mc, 'channels') :
+        return mc.channels
+
+    ch = 0;
+    mc.channels = []
+    while True:
+        res = await mc.commands.get_channel(ch)
+        if res.type == EventType.ERROR:
+            break
+        info = res.payload
+        info["channel_secret"] = info["channel_secret"].hex()
+        mc.channels.append(info)
+        ch = ch + 1
+    return mc.channels
 
 async def next_cmd(mc, cmds, json_output=False):
     """ process next command """
@@ -1419,25 +1511,38 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "get_channel":
                 argnum = 1
-                res = await mc.commands.get_channel(int(cmds[1]))
-                logger.debug(res)
-                if res.type == EventType.ERROR:
+                res = await get_channel(mc, cmds[1])
+                if res is None:
                     print(f"Error while requesting channel info")
                 else:
-                    info = res.payload
-                    info["channel_secret"] = info["channel_secret"].hex()
-                    print(json.dumps(info))
+                    print(res)
+
+            case "get_channels":
+                res = await get_channels(mc)
+                if json_output:
+                    print(json.dumps(res))
+                else:
+                    for c in mc.channels:
+                        if c["channel_name"] != "":
+                            print(f"{c['channel_idx']}: {c['channel_name']} [{c['channel_secret']}]")
 
             case "set_channel":
                 argnum = 3
                 if cmds[2].startswith("#") or len(cmds) == 3:
                     argnum = 2
-                    res = await mc.commands.set_channel(int(cmds[1]), cmds[2])
-                else:
-                    res = await mc.commands.set_channel(int(cmds[1]), cmds[2], bytes.fromhex(cmds[3]))
-                logger.debug(res)
-                if res.type == EventType.ERROR:
-                    print(f"Error while setting channel")
+                    res = await set_channel(mc, cmds[1], cmds[2])
+                elif len(cmds[3]) != 32:
+                    res = None
+                else: 
+                    res = await set_channel(mc, cmds[1], cmds[2], bytes.fromhex(cmds[3]))
+                if res is None:
+                    print("Error setting channel")
+
+            case "remove_channel":
+                argnum = 1
+                res = await set_channel(mc, cmds[1], "", bytes.fromhex(16*"00"))
+                if res is None:
+                    print("Error deleting channel")
 
             case "reboot" :
                 res = await mc.commands.reboot()
@@ -2126,8 +2231,10 @@ def command_help():
     wait_msg               : wait for a message and read it         wm
     sync_msgs              : gets all unread msgs from the node     sm
     msgs_subscribe         : display msgs as they arrive            ms
-    get_channel <n>        : get info for channel n
+    get_channels           : prints all channel info
+    get_channel <n>        : get info for channel (by number or name)
     set_channel n nm k     : set channel info (nb, name, key)
+    remove_channel <n>     : remove channel (by number or name)
   Management
     advert                 : sends advert                           a
     floodadv               : flood advert
@@ -2323,7 +2430,10 @@ async def main(argv):
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
             with open(MCCLI_ADDRESS, "w", encoding="utf-8") as f :
-                f.write(address)
+                if not device is None:
+                    f.write(device.address)
+                elif not address is None:
+                    f.write(address)
 
     handle_message.mc = mc # connect meshcore to handle_message
     handle_advert.mc = mc
