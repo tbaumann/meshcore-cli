@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.27"
+VERSION = "v1.1.28"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -867,13 +867,14 @@ async def send_cmd (mc, contact, cmd) :
     res = await mc.commands.send_cmd(contact, cmd)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-        sent = res.payload.copy()
-        sent["type"] = "SENT_CMD"
-        sent["name"] = contact["adv_name"]
-        sent["text"] = cmd
-        sent["txt_type"] = 1
-        sent["name"] = mc.self_info['name']
-        await log_message(mc, sent)
+        if isinstance(contact, dict):
+            sent = res.payload.copy()
+            sent["type"] = "SENT_CMD"
+            sent["name"] = contact["adv_name"]
+            sent["text"] = cmd
+            sent["txt_type"] = 1
+            sent["name"] = mc.self_info['name']
+            await log_message(mc, sent)
     return res
 
 async def send_chan_msg(mc, nb, msg):
@@ -892,13 +893,14 @@ async def send_msg (mc, contact, msg) :
     res = await mc.commands.send_msg(contact, msg)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-        sent = res.payload.copy()
-        sent["type"] = "SENT_MSG"
-        sent["name"] = contact["adv_name"]
-        sent["text"] = msg
-        sent["txt_type"] = 0
-        sent["name"] = mc.self_info['name']
-        await log_message(mc, sent)
+        if isinstance(contact, dict):
+            sent = res.payload.copy()
+            sent["type"] = "SENT_MSG"
+            sent["name"] = contact["adv_name"]
+            sent["text"] = msg
+            sent["txt_type"] = 0
+            sent["name"] = mc.self_info['name']
+            await log_message(mc, sent)
     return res
 
 async def msg_ack (mc, contact, msg) :
@@ -910,13 +912,14 @@ async def msg_ack (mc, contact, msg) :
                 timeout=timeout)
     if not res is None and not res.type == EventType.ERROR:
         res.payload["expected_ack"] = res.payload["expected_ack"].hex()
-        sent = res.payload.copy()
-        sent["type"] = "SENT_MSG"
-        sent["name"] = contact["adv_name"]
-        sent["text"] = msg
-        sent["txt_type"] = 0
-        sent["name"] = mc.self_info['name']
-        await log_message(mc, sent)
+        if isinstance(contact, dict):
+            sent = res.payload.copy()
+            sent["type"] = "SENT_MSG"
+            sent["name"] = contact["adv_name"]
+            sent["text"] = msg
+            sent["txt_type"] = 0
+            sent["name"] = mc.self_info['name']
+            await log_message(mc, sent)
     return not res is None
 msg_ack.max_attempts=3
 msg_ack.flood_after=2
@@ -967,7 +970,7 @@ async def set_channel (mc, chan, name, key=None):
 
 async def get_channel_by_name (mc, name):
     if not hasattr(mc, 'channels') :
-        get_channels(mc)
+        await get_channels(mc)
 
     for c in mc.channels:
         if c['channel_name'] == name:
@@ -1518,7 +1521,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 else:
                     print(res)
 
-            case "get_channels":
+            case "get_channels"|"gc":
                 res = await get_channels(mc)
                 if json_output:
                     print(json.dumps(res))
@@ -1553,15 +1556,26 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "msg" | "m" | "{" : # sends to a contact from name
                 argnum = 2
-                await mc.ensure_contacts()
-                contact = mc.get_contact_by_name(cmds[1])
-                if contact is None:
+                dest = None
+                
+                if len(cmds[1]) == 12: # possibly an hex prefix 
+                    try:
+                        dest = bytes.fromhex(cmds[1])
+                    except ValueError:
+                        dest = None
+
+                if dest is None:
+                    await mc.ensure_contacts()
+                    dest = mc.get_contact_by_name(cmds[1])
+
+                if dest is None:
                     if json_output :
-                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                        print(json.dumps({"error" : "unknown destination", "dest" : cmds[1]}))
                     else:
-                        print(f"Unknown contact {cmds[1]}")
-                else:
-                    res = await send_msg(mc, contact, cmds[2])
+                        print(f"Unknown destination {cmds[1]}")
+
+                else :
+                    res = await send_msg(mc, dest, cmds[2])
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error sending message: {res}")
@@ -1570,7 +1584,11 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "chan"|"ch" :
                 argnum = 2
-                res = await send_chan_msg(mc, int(cmds[1]), cmds[2])
+                if cmds[1].isnumeric() :
+                    nb = int(cmds[1])
+                else:
+                    nb = get_channel_by_name(mc, cmds[1])['channel_idx']
+                res = await send_chan_msg(mc, nb, cmds[2])
                 logger.debug(res)
                 if res.type == EventType.ERROR:
                     print(f"Error sending message: {res}")
@@ -1588,19 +1606,31 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "cmd" | "c" | "[" :
                 argnum = 2
-                await mc.ensure_contacts()
-                contact = mc.get_contact_by_name(cmds[1])
-                if contact is None:
+                dest = None
+
+                if len(cmds[1]) == 12: # possibly an hex prefix 
+                    try:
+                        dest = bytes.fromhex(cmds[1])
+                    except ValueError:
+                        dest = None
+
+                if dest is None:
+                    await mc.ensure_contacts()
+                    dest = mc.get_contact_by_name(cmds[1])
+
+                if dest is None:
                     if json_output :
-                        print(json.dumps({"error" : "contact unknown", "name" : cmds[1]}))
+                        print(json.dumps({"error" : "contact destination", "dest" : cmds[1]}))
                     else:
-                        print(f"Unknown contact {cmds[1]}")
+                        print(f"Unknown destination {cmds[1]}")
+
                 else:
-                    res = await send_cmd(mc, contact, cmds[2])
+                    res = await send_cmd(mc, dest, cmds[2])
                     logger.debug(res)
                     if res.type == EventType.ERROR:
                         print(f"Error sending cmd: {res}")
                     elif json_output :
+                        print(res.payload)
                         print(json.dumps(res.payload, indent=4))
 
             case "login" | "l" :
@@ -2399,7 +2429,6 @@ async def main(argv):
                     logger.error("Invalid choice")
                     return
                     
-
     if (debug==True):
         logger.setLevel(logging.DEBUG)
     elif (json_output) :
