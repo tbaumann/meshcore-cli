@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.26"
+VERSION = "v1.1.27"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -355,6 +355,7 @@ def make_completion_dict(contacts, pending={}, to=None, channels=None):
             "change_flags" : contact_list,
             "remove_contact" : contact_list,
             "import_contact" : {"meshcore://":None},
+            "reload_contacts" : None,
             "login" : contact_list,
             "cmd" : contact_list,
             "req_status" : contact_list,
@@ -1827,6 +1828,17 @@ async def next_cmd(mc, cmds, json_output=False):
                 else :
                     for c in res.items():
                         print(c[1]["adv_name"])
+                    print(f"> {len(mc.contacts)} contacts in device")
+
+            case "reload_contacts" | "rc":
+                await mc.commands.get_contacts()
+                res = mc.contacts
+                if json_output :
+                    print(json.dumps(res, indent=4))
+                else :
+                    for c in res.items():
+                        print(c[1]["adv_name"])
+                    print(f"> {len(mc.contacts)} contacts in device")
 
             case "pending_contacts":
                 if json_output:
@@ -2245,6 +2257,7 @@ def command_help():
     clock sync             : sync device clock                      st
   Contacts
     contacts / list        : gets contact list                      lc
+    reload_contacts        : force reloading all contacts           rc
     contact_info <ct>      : prints information for contact ct      ci
     contact_timeout <ct> v : sets temp default timeout for contact
     share_contact <ct>     : share a contact with others            sc
