@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.30"
+VERSION = "v1.1.31"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1862,7 +1862,6 @@ async def next_cmd(mc, cmds, json_output=False):
 
             case "reload_contacts" | "rc":
                 await mc.commands.get_contacts()
-                await mc.wait_for_event(EventType.CONTACTS, timeout=30)
                 res = mc.contacts
                 if json_output :
                     print(json.dumps(res, indent=4))
