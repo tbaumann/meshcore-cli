@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.31"
+VERSION = "v1.1.32"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -563,8 +563,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     contact = to
     prev_contact = None
 
-    await mc.ensure_contacts()
-    await get_channels(mc)
+    await mc.commands.get_contacts(anim=True)
+    await get_channels(mc, anim=True)
     await subscribe_to_msgs(mc, above=True)
 
     handle_new_contact.print_new_contacts = True
@@ -978,9 +978,12 @@ async def get_channel_by_name (mc, name):
 
     return None
 
-async def get_channels (mc) :
+async def get_channels (mc, anim=False) :
     if hasattr(mc, 'channels') :
         return mc.channels
+
+    if anim:
+        print("Fetching channels ", end="", flush=True)
 
     ch = 0;
     mc.channels = []
@@ -992,6 +995,9 @@ async def get_channels (mc) :
         info["channel_secret"] = info["channel_secret"].hex()
         mc.channels.append(info)
         ch = ch + 1
+        if anim:
+            print(".", end="", flush=True)
+    print (" Done")
     return mc.channels
 
 async def next_cmd(mc, cmds, json_output=False):
