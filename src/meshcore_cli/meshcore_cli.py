@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.34"
+VERSION = "v1.1.35"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -563,7 +563,8 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
     contact = to
     prev_contact = None
 
-    await mc.commands.get_contacts(anim=True)
+#    await get_contacts(mc, anim=True)
+    await get_contacts(mc, anim=True)
     await get_channels(mc, anim=True)
     await subscribe_to_msgs(mc, above=True)
 
@@ -978,6 +979,60 @@ async def get_channel_by_name (mc, name):
 
     return None
 
+async def get_contacts (mc, anim=False, lastomod=0, timeout=5) :
+    if anim:
+        print("Fetching contacts ", end="", flush=True)
+
+    await mc.commands.get_contacts_async()
+
+    futures = []
+    contact_nb = 0
+    for event_type in [EventType.ERROR, EventType.NEXT_CONTACT, EventType.CONTACTS] :
+        future = asyncio.create_task(
+            mc.wait_for_event(event_type, {}, timeout=timeout)
+        )
+        futures.append(future)
+
+    while True:
+        # Wait for the first event to complete or all to timeout
+        done, pending = await asyncio.wait(
+            futures, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
+        )
+    
+        # Check if any future completed successfully
+        if len(done) == 0:
+            logger.debug("Timeout while getting contacts")
+            for future in pending: # cancel all futures
+                future.cancel()
+            return None
+
+        for future in done:
+            event = await future
+
+            if event:
+                if event.type == EventType.NEXT_CONTACT:
+                    if anim:
+                        contact_nb = contact_nb+1
+                        print(".", end="", flush=True)
+                else: # Done or Error ... cancel pending and return
+                    if anim:
+                        if event.type == EventType.CONTACTS:
+                            print ((len(event.payload)-contact_nb)*"." + " Done")
+                        else : 
+                            print(" Error")
+                    for future in pending:
+                        future.cancel()
+                    return event
+
+        futures = []
+        for future in pending: # put back pending
+            futures.append(future)
+
+        future = asyncio.create_task( # and recreate NEXT_CONTACT
+                mc.wait_for_event(EventType.NEXT_CONTACT, {}, timeout)
+            )
+        futures.append(future)
+
 async def get_channels (mc, anim=False) :
     if hasattr(mc, 'channels') :
         return mc.channels
@@ -1021,7 +1076,7 @@ async def next_cmd(mc, cmds, json_output=False):
                 elif json_output :
                     print(json.dumps(res.payload, indent=4))
                 else :
-                    print("Devince info :")
+                    print("Device info :")
                     if res.payload["fw ver"] >= 3:
                         print(f" Model: {res.payload['model']}")
                         print(f" Version: {res.payload['ver']}")
