@@ -1720,7 +1720,14 @@ async def next_cmd(mc, cmds, json_output=False):
                             print("Self]",end="")
                             for t in ev.payload["path"]:
                                 print("→",end="")
-                                print(f"{t['snr']:.2f}",end="")
+                                snr = t['snr']
+                                if snr >= 10 :
+                                    print(ANSI_GREEN, end="")
+                                elif snr <= 0:
+                                    print(ANSI_RED, end="")
+                                print(f"{snr:.2f}",end="")
+                                if snr >= 10 or snr <= 0:
+                                    print(ANSI_END, end="")
                                 print("→",end="")
                                 if "hash" in t:
                                     print(f"[{t['hash']}]",end="")
