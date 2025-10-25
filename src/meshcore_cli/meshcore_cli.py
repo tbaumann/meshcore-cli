@@ -1694,6 +1694,39 @@ async def next_cmd(mc, cmds, json_output=False):
                         print(res.payload)
                         print(json.dumps(res.payload, indent=4))
 
+            case "trace" :
+                argnum = 1
+                res = await mc.commands.send_trace(path=cmds[1])
+                if res and res.type != EventType.ERROR:
+                    tag= int.from_bytes(res.payload['expected_ack'], byteorder="little")
+                    timeout = res.payload["suggested_timeout"] / 1000 * 1.2
+                    ev = await mc.wait_for_event(EventType.TRACE_DATA, 
+                        attribute_filters={"tag": tag},
+                        timeout=timeout)
+                    if ev is None:
+                        if json_output:
+                            print(json.dumps({"error" : "timeout waiting trace"}))
+                        else :
+                            print("Timeout waiting trace")
+                    elif ev.type == EventType.ERROR:
+                        if json_output:
+                            print(ev.payload)
+                        else :
+                            print("Error waiting trace")
+                    else:
+                        if json_output:
+                            print(ev.payload)
+                        else :
+                            print("Self]",end="")
+                            for t in ev.payload["path"]:
+                                print("→",end="")
+                                print(f"{t['snr']:.2f}",end="")
+                                print("→",end="")
+                                if "hash" in t:
+                                    print(f"[{t['hash']}]",end="")
+                                else:
+                                    print("[Self")
+
             case "login" | "l" :
                 argnum = 2
                 await mc.ensure_contacts()
