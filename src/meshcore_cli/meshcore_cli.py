@@ -2568,7 +2568,16 @@ async def main(argv):
                 logger.info(f"Couldn't find device {address}")
                 return
 
-        mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output, pin=pin)
+        try :
+            mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output, pin=pin)
+        except ConnectionError :
+            logger.info("Error while connecting, retrying once ...")
+            try :
+                mc = await MeshCore.create_ble(address=address, device=device, client=client, debug=debug, only_error=json_output, pin=pin)
+            except ConnectionError :
+                logger.error("Can't connect to node, exiting")
+                return
+
 
         # Store device address in configuration
         if os.path.isdir(MCCLI_CONFIG_DIR) :
