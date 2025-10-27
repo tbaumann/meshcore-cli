@@ -1710,14 +1710,14 @@ async def next_cmd(mc, cmds, json_output=False):
                             print("Timeout waiting trace")
                     elif ev.type == EventType.ERROR:
                         if json_output:
-                            print(ev.payload)
+                            print(json.dumps(ev.payload))
                         else :
                             print("Error waiting trace")
                     else:
                         if json_output:
-                            print(ev.payload)
+                            print(json.dumps(ev.payload, indent=2))
                         else :
-                            print("Self]",end="")
+                            print("]",end="")
                             for t in ev.payload["path"]:
                                 print("→",end="")
                                 snr = t['snr']
@@ -1732,7 +1732,7 @@ async def next_cmd(mc, cmds, json_output=False):
                                 if "hash" in t:
                                     print(f"[{t['hash']}]",end="")
                                 else:
-                                    print("[Self")
+                                    print("[")
 
             case "login" | "l" :
                 argnum = 2
