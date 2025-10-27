@@ -779,28 +779,31 @@ Line starting with \"$\" or \".\" will issue a meshcli command.
             # special treatment for setperm to support contact name as param
             elif contact["type"] > 1 and\
                 (line.startswith("setperm ") or line.startswith("set perm ")):
-                cmds = shlex.split(line)
-                off = 1 if line.startswith("set perm") else 0
-                name = cmds[1 + off]
-                perm_string = cmds[2 + off]
-                if (perm_string.startswith("0x")):
-                    perm = int(perm_string,0)
-                elif (perm_string.startswith("#")):
-                    perm = int(perm_string[1:])
-                else:
-                    perm = int(perm_string,16)
-                ct=mc.get_contact_by_name(name)
-                if ct is None:
-                    ct=mc.get_contact_by_key_prefix(name)
-                if ct is None:
-                    if name == "self" or mc.self_info["public_key"].startswith(name):
-                        key = mc.self_info["public_key"]
+                try:
+                    cmds = shlex.split(line)
+                    off = 1 if line.startswith("set perm") else 0
+                    name = cmds[1 + off]
+                    perm_string = cmds[2 + off]
+                    if (perm_string.startswith("0x")):
+                        perm = int(perm_string,0)
+                    elif (perm_string.startswith("#")):
+                        perm = int(perm_string[1:])
                     else:
-                        key = name
-                else:
-                    key=ct["public_key"]
-                newline=f"setperm {key} {perm}"
-                await process_cmds(mc, ["cmd", contact["adv_name"], newline])
+                        perm = int(perm_string,16)
+                    ct=mc.get_contact_by_name(name)
+                    if ct is None:
+                        ct=mc.get_contact_by_key_prefix(name)
+                    if ct is None:
+                        if name == "self" or mc.self_info["public_key"].startswith(name):
+                            key = mc.self_info["public_key"]
+                        else:
+                            key = name
+                    else:
+                        key=ct["public_key"]
+                    newline=f"setperm {key} {perm}"
+                    await process_cmds(mc, ["cmd", contact["adv_name"], newline])
+                except IndexError:
+                    print("Wrong number of parameters")
                 
             # same but for commands with a parameter
             elif contact["type"] > 0 and (line.startswith("cmd ") or\
