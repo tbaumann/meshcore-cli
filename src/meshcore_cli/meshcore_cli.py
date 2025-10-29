@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.37"
+VERSION = "v1.1.38"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -1801,18 +1801,26 @@ async def next_cmd(mc, cmds, json_output=False):
                         if json_output:
                             print(json.dumps(ev.payload, indent=2))
                         else :
+                            classic = interactive_loop.classic or not process_event_message.color
                             print("]",end="")
                             for t in ev.payload["path"]:
-                                print("→",end="")
+                                if classic :
+                                    print("→",end="")
+                                else:
+                                    print(f" {ANSI_INVERT}", end="")
                                 snr = t['snr']
                                 if snr >= 10 :
-                                    print(ANSI_GREEN, end="")
+                                    print(ANSI_BGREEN, end="")
                                 elif snr <= 0:
-                                    print(ANSI_RED, end="")
+                                    print(ANSI_BRED, end="")
+                                else :
+                                    print(ANSI_BGRAY, end="")
                                 print(f"{snr:.2f}",end="")
-                                if snr >= 10 or snr <= 0:
-                                    print(ANSI_END, end="")
-                                print("→",end="")
+                                if classic :
+                                    print("→",end="")
+                                else :
+                                    print(f"{ANSI_NORMAL}🭬",end="")
+                                print(ANSI_END, end="")
                                 if "hash" in t:
                                     print(f"[{t['hash']}]",end="")
                                 else:
@@ -2427,9 +2435,11 @@ async def process_script(mc, file, json_output=False):
         lines=f.readlines()
 
     for line in lines:
-        logger.debug(f"processing {line}")
-        cmds = shlex.split(line[:-1])
-        await process_cmds(mc, cmds, json_output)
+        line = line.strip()
+        if not (line == "" or line[0] == "#"):
+            logger.debug(f"processing {line}")
+            cmds = shlex.split(line)
+            await process_cmds(mc, cmds, json_output)
 
 def version():
     print (f"meshcore-cli: command line interface to MeshCore companion radios {VERSION}")
