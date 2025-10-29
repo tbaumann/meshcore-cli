@@ -23,7 +23,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from meshcore import MeshCore, EventType, logger
 
 # Version
-VERSION = "v1.1.36"
+VERSION = "v1.1.37"
 
 # default ble address is stored in a config file
 MCCLI_CONFIG_DIR = str(Path.home()) + "/.config/meshcore/"
@@ -69,7 +69,7 @@ def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def print_above(str):
+def print_one_line_above(str):
     """ prints a string above current line """
     width = os.get_terminal_size().columns
     stringlen = len(escape_ansi(str))-1
@@ -84,6 +84,11 @@ def print_above(str):
         print("\u001B[A", end="")                   # Move cursor up one line
     print(str, end="")                          # Print output status msg
     print("\u001B[u", end="", flush=True)       # Jump back to saved cursor position
+
+def print_above(str):
+    lines = str.split('\n')
+    for l in lines:
+        print_one_line_above(l)
 
 async def process_event_message(mc, ev, json_output, end="\n", above=False):
     """ display incoming message """
@@ -350,6 +355,7 @@ def make_completion_dict(contacts, pending={}, to=None, channels=None):
             "share_contact" : contact_list,
             "path": contact_list,
             "disc_path" : contact_list,
+            "trace" : None,
             "reset_path" : contact_list,
             "change_path" : contact_list,
             "change_flags" : contact_list,
@@ -2399,6 +2405,7 @@ def command_help():
     import_contact <URI>   : import a contact from its URI          ic
     remove_contact <ct>    : removes a contact from this node
     path <ct>              : diplays path for a contact
+    disc_path <ct>         : discover new path and display          dp
     reset_path <ct>        : resets path to a contact to flood      rp
     change_path <ct> <pth> : change the path to a contact           cp
     change_flags <ct> <f>  : change contact flags (tel_l|tel_a|star)cf
@@ -2407,13 +2414,14 @@ def command_help():
     req_acl <ct>           : requests access control list for sensor
     pending_contacts       : show pending contacts
     add_pending <key>      : manually add pending contact from key
-    flush_pending          : flush pending contact clist
+    flush_pending          : flush pending contact list
   Repeaters
     login <name> <pwd>     : log into a node (rep) with given pwd   l
     logout <name>          : log out of a repeater
     cmd <name> <cmd>       : sends a command to a repeater (no ack) c  [
     wmt8                   : wait for a msg (reply) with a timeout     ]
-    req_status <name>      : requests status from a node            rs""")
+    req_status <name>      : requests status from a node            rs
+    trace <path>           : run a trace, path is comma separated""")
 
 def usage () :
     """ Prints some help """
