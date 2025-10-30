@@ -1135,7 +1135,12 @@ async def print_disc_trace_to (mc, contact):
 
     for i in range(0, inp_l):
         elem = inp[2*i:2*(i+1)]
-        trace = elem if trace == "" else f"{trace},{elem}"
+        if trace == "":
+            trace = elem
+        elif trace[-2:] != elem:
+            trace = f"{trace},{elem}"
+
+    logger.info(f"Trying {trace}")
 
     await next_cmd(mc, ["trace", trace])
 
